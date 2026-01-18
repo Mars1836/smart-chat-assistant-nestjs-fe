@@ -112,8 +112,42 @@ export interface WorkspaceRole {
   name: string;
   description?: string;
   is_system_role: boolean;
-  created_at: string;
   updated_at: string;
+}
+
+export type PermissionAction = "grant" | "revoke";
+
+export type PermissionName =
+  | "workspace.update"
+  | "workspace.delete"
+  | "workspace.view_settings"
+  | "member.invite"
+  | "member.remove"
+  | "member.update_role"
+  | "member.view"
+  | "chatbot.create"
+  | "chatbot.update"
+  | "chatbot.delete"
+  | "chatbot.view"
+  | "chatbot.chat"
+  | "chatbot.view_logs"
+  | "document.upload"
+  | "document.update"
+  | "document.delete"
+  | "document.view";
+
+export interface UpdatePermissionDto {
+  permission_name: PermissionName | string;
+  action: PermissionAction;
+}
+
+export interface EffectivePermission {
+  permission_name: PermissionName | string;
+  description: string;
+  category: string;
+  is_allowed: boolean;
+  source: "ROLE" | "CUSTOM" | "NONE";
+  custom_grant_type: "grant" | "revoke" | null;
 }
 
 // API Functions
@@ -224,9 +258,6 @@ export const workspacesApi = {
     return response.data;
   },
 
-  /**
-   * Update member role
-   */
   updateMemberRole: async (
     workspaceId: string,
     memberId: string,
@@ -237,6 +268,33 @@ export const workspacesApi = {
       { role_name: roleName }
     );
     return response.data;
+  },
+
+  /**
+   * Update member custom permissions
+   */
+  updateMemberPermissions: async (
+    workspaceId: string,
+    memberId: string,
+    data: UpdatePermissionDto
+  ): Promise<void> => {
+    await client.post(
+      workspacesEndpoints.updateMemberPermissions(workspaceId, memberId),
+      data
+    );
+  },
+
+  /**
+   * Get member effective permissions
+   */
+  getEffectivePermissions: async (
+    workspaceId: string,
+    memberId: string
+  ): Promise<EffectivePermission[]> => {
+    const response = await client.get<{ permissions: EffectivePermission[] }>(
+      workspacesEndpoints.getEffectivePermissions(workspaceId, memberId)
+    );
+    return response.data.permissions;
   },
 };
 

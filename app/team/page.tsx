@@ -15,6 +15,7 @@ import { Plus, MoreVertical, Mail, Trash2, Shield, Loader2 } from "lucide-react"
 import { useState, useEffect } from "react";
 import { InviteMemberDialog } from "@/components/invite-member-dialog";
 import { ChangeRoleDialog } from "@/components/change-role-dialog";
+import { ManagePermissionsDialog } from "@/components/manage-permissions-dialog";
 import { toast } from "sonner";
 import { useWorkspace } from "@/lib/stores/workspace-store";
 import { workspacesApi, type WorkspaceMember } from "@/lib/api/workspaces/workspaces-api";
@@ -32,6 +33,7 @@ export default function TeamPage() {
 
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [editingMember, setEditingMember] = useState<WorkspaceMember | null>(null);
+  const [managingPermissionsMember, setManagingPermissionsMember] = useState<WorkspaceMember | null>(null);
   const workspaceId = selectedWorkspace?.id;
 
   useEffect(() => {
@@ -218,7 +220,17 @@ export default function TeamPage() {
 
                            const hasActions = canEdit || canRemove;
 
-                           if (!hasActions) return null;
+                           if (!hasActions) {
+                             return (
+                               <Button
+                                 variant="ghost"
+                                 size="sm"
+                                 className="opacity-0 pointer-events-none"
+                               >
+                                 <MoreVertical className="w-4 h-4" />
+                               </Button>
+                             );
+                           }
 
                            return (
                              <DropdownMenu>
@@ -233,12 +245,20 @@ export default function TeamPage() {
                                </DropdownMenuTrigger>
                                <DropdownMenuContent align="end">
                                  {canEdit && (
-                                   <DropdownMenuItem
-                                     onClick={() => setEditingMember(member)}
-                                   >
-                                     <Shield className="w-4 h-4 mr-2" />
-                                     Change role
-                                   </DropdownMenuItem>
+                                   <>
+                                     <DropdownMenuItem
+                                       onClick={() => setEditingMember(member)}
+                                     >
+                                       <Shield className="w-4 h-4 mr-2" />
+                                       Change role
+                                     </DropdownMenuItem>
+                                     <DropdownMenuItem
+                                       onClick={() => setManagingPermissionsMember(member)}
+                                     >
+                                       <Shield className="w-4 h-4 mr-2 text-blue-500" />
+                                       Manage permissions
+                                     </DropdownMenuItem>
+                                   </>
                                  )}
                                  {canRemove && (
                                    <DropdownMenuItem
@@ -398,6 +418,20 @@ export default function TeamPage() {
             currentRole={editingMember.workspaceRole.name}
             currentUserRole={selectedWorkspace?.user_role || "Viewer"}
             onSuccess={loadData}
+          />
+        )}
+
+        {/* Manage Permissions Dialog */}
+        {managingPermissionsMember && (
+          <ManagePermissionsDialog
+            open={!!managingPermissionsMember}
+            onOpenChange={(open) => {
+              if (!open) setManagingPermissionsMember(null);
+            }}
+            workspaceId={workspaceId || ""}
+            memberId={managingPermissionsMember.id}
+            memberName={managingPermissionsMember.user.full_name}
+            memberRole={managingPermissionsMember.workspaceRole.name}
           />
         )}
       </div>

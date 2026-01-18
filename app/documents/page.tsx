@@ -42,15 +42,14 @@ import {
 import { API_BASE_URL } from "@/lib/constants";
 import { toast } from "sonner";
 
+import { useWorkspace } from "@/lib/stores/workspace-store";
+
 export default function DocumentsPage() {
-  const [workspaces, setWorkspaces] = useState<WorkspaceResponseDto[]>([]);
-  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(
-    null
-  );
+  const { selectedWorkspace } = useWorkspace();
   const [documents, setDocuments] = useState<DocumentResponseDto[]>([]);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [searchQuery, setSearchQuery] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
@@ -60,29 +59,14 @@ export default function DocumentsPage() {
   const [newFileName, setNewFileName] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Load workspaces on mount
-  useEffect(() => {
-    loadWorkspaces();
-  }, []);
+  const workspaceId = selectedWorkspace?.id;
 
-  const loadWorkspaces = async () => {
-    try {
-      setLoading(true);
-      const response = await workspacesApi.list();
-      setWorkspaces(response.data);
-      if (response.data.length > 0) {
-        setSelectedWorkspaceId(response.data[0].id);
-        await loadDocuments(response.data[0].id);
-      }
-    } catch (err) {
-      console.error("Error loading workspaces:", err);
-      toast.error("Lỗi tải workspaces", {
-        description: "Không thể tải danh sách workspaces",
-      });
-    } finally {
-      setLoading(false);
+  // Load documents when workspace changes
+  useEffect(() => {
+    if (workspaceId) {
+      loadDocuments(workspaceId);
     }
-  };
+  }, [workspaceId]);
 
   const loadDocuments = async (workspaceId: string) => {
     try {
@@ -103,7 +87,7 @@ export default function DocumentsPage() {
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !selectedWorkspaceId) return;
+    if (!file || !workspaceId) return;
 
     // Check file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
@@ -115,11 +99,11 @@ export default function DocumentsPage() {
 
     try {
       setUploading(true);
-      await documentsApi.create(selectedWorkspaceId, file);
+      await documentsApi.create(workspaceId, file);
       toast.success("Upload thành công", {
         description: `Đã tải lên ${file.name}`,
       });
-      await loadDocuments(selectedWorkspaceId);
+      await loadDocuments(workspaceId);
       setUploadDialogOpen(false);
     } catch (err: any) {
       console.error("Error uploading document:", err);
@@ -135,11 +119,11 @@ export default function DocumentsPage() {
   };
 
   const handleDelete = async (doc: DocumentResponseDto) => {
-    if (!selectedWorkspaceId) return;
+    if (!workspaceId) return;
 
     try {
       setDeleting(doc.id);
-      await documentsApi.delete(selectedWorkspaceId, doc.id);
+      await documentsApi.delete(workspaceId, doc.id);
       toast.success("Đã xóa tài liệu", {
         description: `Đã xóa ${doc.file_name}`,
       });
@@ -155,12 +139,12 @@ export default function DocumentsPage() {
   };
 
   const handleRename = async () => {
-    if (!selectedWorkspaceId || !selectedDocument || !newFileName.trim())
+    if (!workspaceId || !selectedDocument || !newFileName.trim())
       return;
 
     try {
       const updated = await documentsApi.update(
-        selectedWorkspaceId,
+        workspaceId,
         selectedDocument.id,
         {
           file_name: newFileName.trim(),
@@ -228,7 +212,7 @@ export default function DocumentsPage() {
             <DialogTrigger asChild>
               <Button
                 className="gap-2 bg-primary hover:bg-primary/90"
-                disabled={!selectedWorkspaceId}
+                disabled={!workspaceId}
               >
                 <Upload className="w-4 h-4" />
                 Upload
