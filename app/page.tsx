@@ -1,102 +1,176 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/stores/auth-store";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  MessageSquare,
+  Calendar,
+  FileText,
+  Users,
+  ArrowRight,
+  Sparkles,
+} from "lucide-react";
+import Link from "next/link";
+
+export default function HomePage() {
+  const { isAuthenticated, isLoading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    // Redirect to chat if already authenticated
+    if (!isLoading && isAuthenticated) {
+      router.push("/chat");
+    }
+  }, [isAuthenticated, isLoading, router]);
+
+  const handleGetStarted = () => {
+    router.push("/auth/login");
+  };
+
+  if (isLoading) {
+    return null; // Or a loading spinner
+  }
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <div className="min-h-screen bg-linear-to-br from-primary/5 via-background to-secondary/5">
+      {/* Header */}
+      <header className="container mx-auto px-4 py-6 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+            <Sparkles className="w-6 h-6 text-primary-foreground" />
+          </div>
+          <span className="text-2xl font-bold text-foreground">WorkMind</span>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
+        <div className="flex gap-4">
+          <Button variant="ghost" onClick={() => router.push("/auth/login")}>
+            Sign in
+          </Button>
+          <Button
+            className="bg-primary hover:bg-primary/90"
+            onClick={() => router.push("/auth/signup")}
+          >
+            Get started
+          </Button>
+        </div>
+      </header>
+
+      {/* Hero Section */}
+      <section className="container mx-auto px-4 py-20 text-center">
+        <div className="max-w-3xl mx-auto">
+          <h1 className="text-5xl font-bold text-foreground mb-6">
+            AI-Powered Task Management
+            <span className="block text-primary mt-2">for Modern Teams</span>
+          </h1>
+          <p className="text-xl text-muted-foreground mb-8">
+            Streamline your workflow with intelligent automation, seamless
+            collaboration, and powerful AI assistance.
+          </p>
+          <div className="flex gap-4 justify-center">
+            <Button
+              size="lg"
+              className="bg-primary hover:bg-primary/90 text-lg px-8"
+              onClick={handleGetStarted}
+            >
+              Get started free
+              <ArrowRight className="w-5 h-5 ml-2" />
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className="text-lg px-8"
+              onClick={() => router.push("/auth/login")}
+            >
+              Sign in
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section className="container mx-auto px-4 py-20">
+        <h2 className="text-3xl font-bold text-center text-foreground mb-12">
+          Everything you need to stay productive
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader>
+              <MessageSquare className="w-10 h-10 text-primary mb-4" />
+              <CardTitle>AI Chat Assistant</CardTitle>
+              <CardDescription>
+                Get instant help with your tasks using advanced AI technology
+              </CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader>
+              <Calendar className="w-10 h-10 text-primary mb-4" />
+              <CardTitle>Smart Calendar</CardTitle>
+              <CardDescription>
+                Manage your schedule and never miss an important deadline
+              </CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader>
+              <FileText className="w-10 h-10 text-primary mb-4" />
+              <CardTitle>Document Management</CardTitle>
+              <CardDescription>
+                Store, organize, and access all your files in one place
+              </CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader>
+              <Users className="w-10 h-10 text-primary mb-4" />
+              <CardTitle>Team Collaboration</CardTitle>
+              <CardDescription>
+                Work together seamlessly with your team members
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="container mx-auto px-4 py-20">
+        <Card className="bg-primary/10 border-primary/20 max-w-3xl mx-auto">
+          <CardContent className="p-12 text-center">
+            <h2 className="text-3xl font-bold text-foreground mb-4">
+              Ready to boost your productivity?
+            </h2>
+            <p className="text-lg text-muted-foreground mb-8">
+              Join thousands of teams already using WorkMind to stay organized
+              and efficient.
+            </p>
+            <Button
+              size="lg"
+              className="bg-primary hover:bg-primary/90 text-lg px-8"
+              onClick={handleGetStarted}
+            >
+              Start for free today
+              <ArrowRight className="w-5 h-5 ml-2" />
+            </Button>
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* Footer */}
+      <footer className="container mx-auto px-4 py-8 border-t border-border">
+        <div className="flex items-center justify-center text-sm text-muted-foreground">
+          <p>© 2025 WorkMind. All rights reserved.</p>
+        </div>
       </footer>
     </div>
   );
