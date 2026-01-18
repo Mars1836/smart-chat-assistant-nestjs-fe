@@ -8,7 +8,7 @@ import { authApi } from "../api/auth/auth-api";
 interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, redirectUrl?: string) => Promise<void>;
   logout: () => void;
   checkAuth: () => void;
 }
@@ -22,7 +22,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isAuthenticated: hasTokens, isLoading: false });
   },
 
-  login: async (email: string, password: string) => {
+  login: async (email: string, password: string, redirectUrl?: string) => {
     try {
       const response = await authApi.login({ email, password });
 
@@ -32,9 +32,9 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       set({ isAuthenticated: true });
 
-      // Redirect to workspace selection after login
+      // Redirect to provided URL or default to workspace selection
       if (typeof window !== "undefined") {
-        window.location.href = "/workspace";
+        window.location.href = redirectUrl || "/workspace";
       }
     } catch (error) {
       // Re-throw error so it can be caught by the login page

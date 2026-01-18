@@ -65,4 +65,24 @@ export const workspaceInvitationsApi = {
     );
     return response.data;
   },
+
+  /**
+   * Resend workspace invitation email
+   */
+  resend: async (workspaceId: string, invitationId: string): Promise<{ message: string }> => {
+    const response = await client.post<{ message: string }>(
+      workspaceInvitationsEndpoints.resend(workspaceId, invitationId)
+    );
+    return response.data;
+  },
+
+  /**
+   * Cancel a pending workspace invitation
+   */
+  cancel: async (workspaceId: string, invitationId: string): Promise<{ message: string }> => {
+    const response = await client.delete<{ message: string }>(
+      workspaceInvitationsEndpoints.cancel(workspaceId, invitationId)
+    );
+    return response.data;
+  },
 };

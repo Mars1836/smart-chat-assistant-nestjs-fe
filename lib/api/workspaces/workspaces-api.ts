@@ -27,6 +27,8 @@ export interface WorkspaceResponseDto {
   description?: string;
   owner_id: string;
   is_personal: boolean;
+  is_owner: boolean;
+  user_role: string; // "Owner" | "Admin" | "Editor" | "Viewer"
   icon?: string;
   color?: string;
   created_at: string;
@@ -218,6 +220,21 @@ export const workspacesApi = {
   getMembers: async (workspaceId: string): Promise<WorkspaceMember[]> => {
     const response = await client.get<WorkspaceMember[]>(
       workspacesEndpoints.getMembers(workspaceId)
+    );
+    return response.data;
+  },
+
+  /**
+   * Update member role
+   */
+  updateMemberRole: async (
+    workspaceId: string,
+    memberId: string,
+    roleName: string
+  ): Promise<WorkspaceMember> => {
+    const response = await client.patch<WorkspaceMember>(
+      workspacesEndpoints.updateMemberRole(workspaceId, memberId),
+      { role_name: roleName }
     );
     return response.data;
   },

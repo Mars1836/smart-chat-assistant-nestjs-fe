@@ -11,7 +11,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -20,67 +19,84 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { workspacesApi, type WorkspaceRole } from "@/lib/api/workspaces/workspaces-api";
+import { workspacesApi } from "@/lib/api/workspaces/workspaces-api";
 import { toast } from "sonner";
 
-interface InviteMemberDialogProps {
+interface ChangeRoleDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   workspaceId: string;
+  memberId: string;
+  memberName: string;
+  currentRole: string; // "Admin" | "Editor" | "Viewer"
+  currentUserRole: string; // "Owner" | "Admin" | "Editor" | "Viewer"
   onSuccess?: () => void;
 }
 
-export function InviteMemberDialog({
+export function ChangeRoleDialog({
   open,
   onOpenChange,
   workspaceId,
+  memberId,
+  memberName,
+  currentRole,
+  currentUserRole,
   onSuccess,
-}: InviteMemberDialogProps) {
-  const [email, setEmail] = useState("");
-  const [selectedRoleId, setSelectedRoleId] = useState<string>("");
+}: ChangeRoleDialogProps) {
+  const [selectedRole, setSelectedRole] = useState<string>(currentRole);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Backend roles based on API documentation
-  const roles = [
+  // Reset selected role when dialog opens or currentRole changes
+  useEffect(() => {
+    if (open) {
+      setSelectedRole(currentRole);
+    }
+  }, [open, currentRole]);
+
+  // Backend roles
+  const allRoles = [
     { id: "Admin", name: "Admin", description: "Tất cả trừ xóa workspace" },
     { id: "Editor", name: "Editor", description: "Quản lý chatbot & documents" },
-    { id: "Viewer", name: "Viewer", description: "Chỉ xem" }
+    { id: "Viewer", name: "Viewer", description: "Chỉ xem" },
   ];
 
-  const handleInvite = async () => {
-    if (!email || !selectedRoleId) {
-      toast.error("Vui lòng điền đầy đủ thông tin");
+  // Filter roles: Only Owner can assign Admin role
+  const roles = allRoles.filter(role => {
+    if (role.name === "Admin" && currentUserRole !== "Owner") {
+      return false;
+    }
+    return true;
+  });
+
+  const handleSave = async () => {
+    if (!selectedRole) return;
+    if (selectedRole === currentRole) {
+      onOpenChange(false);
       return;
     }
 
-    if (!workspaceId) {
-      toast.error("Workspace ID is missing");
+    if (!workspaceId || !memberId) {
+      toast.error("Missing required information");
       return;
     }
 
     setIsLoading(true);
     try {
-      console.log("Sending invite request...", {
-        email,
-        role_name: selectedRoleId,
+      console.log("Updating member role...", {
+        workspaceId,
+        memberId,
+        role: selectedRole,
       });
-      await workspacesApi.inviteMember(workspaceId, {
-        email,
-        role_name: selectedRoleId,
-      });
-      toast.success("Đã gửi lời mời thành công");
+      await workspacesApi.updateMemberRole(workspaceId, memberId, selectedRole);
+      toast.success("Cập nhật vai trò thành công");
       onOpenChange(false);
-      setEmail("");
-      setSelectedRoleId("");
       onSuccess?.();
     } catch (error: any) {
-      console.error("Invite error:", error);
-      if (error.response?.status === 409) {
-        toast.error("Người dùng đã là thành viên của workspace");
-      } else if (error.response?.status === 403) {
-        toast.error("Bạn không có quyền mời thành viên");
+      console.error("Update role error:", error);
+      if (error.response?.status === 403) {
+        toast.error("Bạn không có quyền thay đổi vai trò");
       } else {
-        toast.error("Có lỗi xảy ra khi gửi lời mời");
+        toast.error(error.response?.data?.message || "Có lỗi xảy ra khi cập nhật vai trò");
       }
     } finally {
       setIsLoading(false);
@@ -91,30 +107,18 @@ export function InviteMemberDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Mời Thành Viên</DialogTitle>
+          <DialogTitle>Thay đổi vai trò</DialogTitle>
           <DialogDescription>
-            Gửi lời mời tham gia workspace qua email
+            Thay đổi quyền hạn của thành viên <strong>{memberName}</strong>
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="example@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={isLoading}
-            />
-          </div>
-          
           <div className="space-y-2">
             <Label htmlFor="role">Vai trò</Label>
             <Select
-              value={selectedRoleId}
-              onValueChange={setSelectedRoleId}
+              value={selectedRole}
+              onValueChange={setSelectedRole}
               disabled={isLoading}
             >
               <SelectTrigger id="role">
@@ -145,8 +149,8 @@ export function InviteMemberDialog({
           >
             Hủy
           </Button>
-          <Button type="button" onClick={handleInvite} disabled={isLoading}>
-            {isLoading ? "Đang gửi..." : "Gửi lời mời"}
+          <Button type="button" onClick={handleSave} disabled={isLoading}>
+            {isLoading ? "Đang lưu..." : "Lưu thay đổi"}
           </Button>
         </DialogFooter>
       </DialogContent>

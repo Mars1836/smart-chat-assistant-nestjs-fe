@@ -195,7 +195,7 @@ export function AppLayout({ children, activeModule }: AppLayoutProps) {
                   <ChevronDown className="w-4 h-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" className="w-72">
                 {workspaces.map((workspace) => (
                   <DropdownMenuItem
                     key={workspace.id}
@@ -206,10 +206,17 @@ export function AppLayout({ children, activeModule }: AppLayoutProps) {
                         : ""
                     }
                   >
-                    {workspace.name}
-                    {selectedWorkspace?.id === workspace.id && (
-                      <span className="ml-2 text-primary">✓</span>
-                    )}
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center gap-2">
+                        <span>{workspace.name}</span>
+                        {selectedWorkspace?.id === workspace.id && (
+                          <span className="text-primary">✓</span>
+                        )}
+                      </div>
+                      <span className="text-xs px-2 py-0.5 rounded bg-secondary text-secondary-foreground">
+                        {workspace.user_role}
+                      </span>
+                    </div>
                   </DropdownMenuItem>
                 ))}
                 <DropdownMenuSeparator />
@@ -233,8 +240,13 @@ export function AppLayout({ children, activeModule }: AppLayoutProps) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem>Profile</DropdownMenuItem>
-                <DropdownMenuItem>Preferences</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push("/profile")}>
+                  Profile & Preferences
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => router.push("/settings")}>
+                  Workspace Settings
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout}>
                   Sign out

@@ -82,3 +82,12 @@ export {
   type ListDocumentsParams,
 } from "./documents/documents-api";
 export { documentsEndpoints } from "./documents/endpoints";
+
+// Workspace Invitations API
+export {
+  workspaceInvitationsApi,
+  type AcceptInvitationDto,
+  type AcceptInvitationResponseDto,
+  type WorkspaceInvitation,
+} from "./workspace-invitations/workspace-invitations-api";
+export { workspaceInvitationsEndpoints } from "./workspace-invitations/endpoints";
