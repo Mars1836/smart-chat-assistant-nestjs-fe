@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { Suspense, useEffect, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,7 +17,7 @@ import { Loader2 } from "lucide-react";
 
 type PageStatus = "loading" | "processing" | "success" | "error";
 
-export default function AcceptInvitePage() {
+function AcceptInviteContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
@@ -46,7 +46,7 @@ export default function AcceptInvitePage() {
     // User is authenticated, proceed with token validation
     if (!token) {
       setStatus("error");
-      setError("Token không hợp lệ. Vui lòng kiểm tra lại link trong email.");
+      setError("Token khong hop le. Vui long kiem tra lai link trong email.");
       return;
     }
 
@@ -184,5 +184,39 @@ export default function AcceptInvitePage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+// Loading fallback component
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen bg-linear-to-br from-primary/5 to-secondary/5 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-primary mb-2">WorkMind</h1>
+          <p className="text-muted-foreground">
+            AI-powered task management for teams
+          </p>
+        </div>
+
+        <Card className="border-0 shadow-lg">
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+              <p className="text-muted-foreground">Dang tai...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// Main export with Suspense boundary
+export default function AcceptInvitePage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <AcceptInviteContent />
+    </Suspense>
   );
 }

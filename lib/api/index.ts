@@ -91,3 +91,36 @@ export {
   type WorkspaceInvitation,
 } from "./workspace-invitations/workspace-invitations-api";
 export { workspaceInvitationsEndpoints } from "./workspace-invitations/endpoints";
+
+// Tools API
+export {
+  toolsApi,
+  workspaceToolsApi,
+  chatbotToolsApi,
+  type Plugin,
+  type Tool,
+  type PluginAction,
+  type PluginAuthType,
+  type PluginAuthConfig,
+  type UserAuthStatus,
+  type WorkspaceToolConfig,
+  type ChatbotTool,
+  type ToolCategory,
+  type ToolExecutorType,
+  type AddWorkspaceToolDto,
+  type UpdateWorkspaceToolDto,
+  type UpdateChatbotToolDto,
+  type UpdateActionDto,
+  type BatchActionsDto,
+  type OAuthAuthorizeResponse,
+  type OAuthStatusResponse,
+  type LLMFunctionDeclaration,
+  type ExecuteToolDto,
+  type ExecuteToolResponseDto,
+  type ListToolsParams,
+} from "./tools/tools-api";
+export {
+  toolsEndpoints,
+  workspaceToolsEndpoints,
+  chatbotToolsEndpoints,
+} from "./tools/endpoints";

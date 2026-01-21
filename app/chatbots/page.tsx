@@ -25,6 +25,7 @@ import {
   X,
   Check,
   AlertCircle,
+  Plug,
 } from "lucide-react";
 import { useWorkspace } from "@/lib/stores/workspace-store";
 import {
@@ -34,6 +35,7 @@ import {
   type UpdateChatbotDto,
   type PaginatedResponse,
 } from "@/lib/api";
+import { ChatbotToolsDialog } from "@/components/chatbot-tools-dialog";
 
 export default function ChatbotsPage() {
   const { selectedWorkspace } = useWorkspace();
@@ -49,6 +51,10 @@ export default function ChatbotsPage() {
   const [editingChatbot, setEditingChatbot] = useState<Chatbot | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [availableModels, setAvailableModels] = useState<string[]>([]);
+  
+  // Tools dialog state
+  const [toolsDialogOpen, setToolsDialogOpen] = useState(false);
+  const [selectedChatbotForTools, setSelectedChatbotForTools] = useState<Chatbot | null>(null);
 
   // Form state
   const [formData, setFormData] = useState<CreateChatbotDto>({
@@ -143,6 +149,11 @@ export default function ChatbotsPage() {
       max_tokens: chatbot.max_tokens,
     });
     setShowForm(true);
+  };
+
+  const handleOpenTools = (chatbot: Chatbot) => {
+    setSelectedChatbotForTools(chatbot);
+    setToolsDialogOpen(true);
   };
 
   const handleSubmit = async () => {
@@ -593,14 +604,18 @@ export default function ChatbotsPage() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => handleEdit(chatbot)}>
                             <Edit className="w-4 h-4 mr-2" />
-                            Chỉnh sửa
+                            Chinh sua
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleOpenTools(chatbot)}>
+                            <Plug className="w-4 h-4 mr-2" />
+                            Plugins
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="text-destructive"
                             onClick={() => handleDelete(chatbot)}
                           >
                             <Trash2 className="w-4 h-4 mr-2" />
-                            Xóa
+                            Xoa
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -677,6 +692,17 @@ export default function ChatbotsPage() {
               </p>
             </CardContent>
           </Card>
+        )}
+
+        {/* Tools Dialog */}
+        {selectedChatbotForTools && selectedWorkspace && (
+          <ChatbotToolsDialog
+            open={toolsDialogOpen}
+            onOpenChange={setToolsDialogOpen}
+            workspaceId={selectedWorkspace.id}
+            chatbotId={selectedChatbotForTools.id}
+            chatbotName={selectedChatbotForTools.name}
+          />
         )}
       </div>
     </AppLayout>

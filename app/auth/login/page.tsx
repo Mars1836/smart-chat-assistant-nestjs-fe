@@ -2,7 +2,7 @@
 
 import type React from "react";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,8 +14,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useAuth } from "@/lib/stores/auth-store";
+import { Loader2 } from "lucide-react";
 
-export default function LoginPage() {
+function LoginContent() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -40,13 +41,13 @@ export default function LoginPage() {
       
       // If we have a 401 status or specific authentication error, show Vietnamese message
       if (err?.response?.status === 401 || errorMessage?.toLowerCase().includes('invalid') || errorMessage?.toLowerCase().includes('incorrect') || errorMessage?.toLowerCase().includes('wrong')) {
-        setError("Sai tài khoản hoặc mật khẩu");
+        setError("Sai tai khoan hoac mat khau");
       } else if (errorMessage) {
         setError(errorMessage);
       } else if (err instanceof Error) {
         setError(err.message);
       } else {
-        setError("Sai tài khoản hoặc mật khẩu");
+        setError("Sai tai khoan hoac mat khau");
       }
     } finally {
       setIsLoading(false);
@@ -94,7 +95,7 @@ export default function LoginPage() {
                 <Input
                   id="password"
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="********"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="h-10"
@@ -129,5 +130,37 @@ export default function LoginPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen bg-linear-to-br from-primary/5 to-secondary/5 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-primary mb-2">WorkMind</h1>
+          <p className="text-muted-foreground">
+            AI-powered task management for teams
+          </p>
+        </div>
+
+        <Card className="border-0 shadow-lg">
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+              <p className="text-muted-foreground">Loading...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <LoginContent />
+    </Suspense>
   );
 }
