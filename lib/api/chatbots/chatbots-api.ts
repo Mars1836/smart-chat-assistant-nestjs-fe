@@ -64,6 +64,7 @@ export interface ChatDto {
 }
 
 export interface ChatResponseDto {
+  conversation_id?: string;
   response: string;
   model: string;
   processingTime: number;

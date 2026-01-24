@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   MessageSquare,
-  FileText,
+
   Users,
   Settings,
   Search,
@@ -25,13 +25,14 @@ import {
   ChevronDown,
   Bot,
   Plug,
+  Book,
 } from "lucide-react";
 import { useAuth } from "@/lib/stores/auth-store";
 import { useWorkspace } from "@/lib/stores/workspace-store";
 
 interface AppLayoutProps {
   children: React.ReactNode;
-  activeModule: "chat" | "documents" | "team" | "chatbots" | "settings" | "plugins";
+  activeModule: "chat" | "team" | "chatbots" | "settings" | "plugins" | "knowledge";
 }
 
 export function AppLayout({ children, activeModule }: AppLayoutProps) {
@@ -76,12 +77,7 @@ export function AppLayout({ children, activeModule }: AppLayoutProps) {
 
   const modules = [
     { id: "chat", label: "Chat", icon: MessageSquare, href: "/chat" },
-    {
-      id: "documents",
-      label: "Documents",
-      icon: FileText,
-      href: "/documents",
-    },
+
     { id: "team", label: "Team", icon: Users, href: "/team" },
     {
       id: "chatbots",
@@ -100,6 +96,12 @@ export function AppLayout({ children, activeModule }: AppLayoutProps) {
       label: "Settings",
       icon: Settings,
       href: "/settings",
+    },
+    {
+      id: "knowledge",
+      label: "Knowledge",
+      icon: Book,
+      href: "/knowledge",
     },
   ];
 

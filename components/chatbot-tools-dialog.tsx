@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import {
   toolsApi,
+  workspaceToolsApi,
   chatbotToolsApi,
   type Tool,
   type ChatbotTool,
@@ -102,13 +103,13 @@ export function ChatbotToolsDialog({
     try {
       setLoading(true);
       
-      // Load both global tools and chatbot-specific tools in parallel
-      const [globalTools, enabledTools] = await Promise.all([
-        toolsApi.list(),
+      // Load installed workspace tools and chatbot-specific tools in parallel
+      const [workspaceTools, enabledTools] = await Promise.all([
+        workspaceToolsApi.installed(workspaceId),
         chatbotToolsApi.list(workspaceId, chatbotId),
       ]);
 
-      setAllTools(globalTools);
+      setAllTools(workspaceTools);
       setChatbotTools(enabledTools);
     } catch (err: any) {
       console.error("Error loading tools:", err);
@@ -121,7 +122,7 @@ export function ChatbotToolsDialog({
   };
 
   const getChatbotTool = (toolId: string) => {
-    return chatbotTools.find((t) => t.id === toolId);
+    return chatbotTools.find((t) => t.id === toolId || (t as any).tool?.id === toolId);
   };
 
   const isToolEnabled = (toolId: string): boolean => {
@@ -168,11 +169,12 @@ export function ChatbotToolsDialog({
       } else {
         // Update the tool's enabled state
         setChatbotTools((prev) =>
-          prev.map((t) =>
-            t.id === tool.id
+          prev.map((t) => {
+            const tId = (t as any).tool?.id || t.id;
+            return tId === tool.id
               ? { ...t, chatbot_tool: { ...t.chatbot_tool, is_enabled: false } }
-              : t
-          )
+              : t;
+          })
         );
         // Collapse
         setExpandedTools(prev => ({ ...prev, [tool.id]: false }));
@@ -203,7 +205,8 @@ export function ChatbotToolsDialog({
       // Update local state
       setChatbotTools((prev) => 
         prev.map((t) => {
-          if (t.id !== tool.id) return t;
+          const tId = (t as any).tool?.id || t.id;
+          if (tId !== tool.id) return t;
           
           const currentEnabledActions = t.chatbot_tool?.enabled_actions || tool.actions.map(a => a.name);
           let newEnabledActions;

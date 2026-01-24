@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/app-layout";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,8 @@ import {
   Check,
   AlertCircle,
   Plug,
+  Settings,
+  MessageSquare,
 } from "lucide-react";
 import { useWorkspace } from "@/lib/stores/workspace-store";
 import {
@@ -36,8 +39,10 @@ import {
   type PaginatedResponse,
 } from "@/lib/api";
 import { ChatbotToolsDialog } from "@/components/chatbot-tools-dialog";
+import { ChatbotChatDialog } from "@/components/chatbot-chat-dialog";
 
 export default function ChatbotsPage() {
+  const router = useRouter(); // Need to add import { useRouter } from "next/navigation" if not present, but wait, it is imported in line 19? No.
   const { selectedWorkspace } = useWorkspace();
   const [chatbots, setChatbots] = useState<PaginatedResponse<Chatbot> | null>(
     null
@@ -55,6 +60,10 @@ export default function ChatbotsPage() {
   // Tools dialog state
   const [toolsDialogOpen, setToolsDialogOpen] = useState(false);
   const [selectedChatbotForTools, setSelectedChatbotForTools] = useState<Chatbot | null>(null);
+
+  // Chat dialog state
+  const [chatDialogOpen, setChatDialogOpen] = useState(false);
+  const [selectedChatbotForChat, setSelectedChatbotForChat] = useState<Chatbot | null>(null);
 
   // Form state
   const [formData, setFormData] = useState<CreateChatbotDto>({
@@ -156,6 +165,11 @@ export default function ChatbotsPage() {
     setToolsDialogOpen(true);
   };
 
+  const handleChat = (chatbot: Chatbot) => {
+    setSelectedChatbotForChat(chatbot);
+    setChatDialogOpen(true);
+  };
+
   const handleSubmit = async () => {
     if (!selectedWorkspace || !formData.name.trim()) {
       toast.error("Vui lòng nhập tên chatbot");
@@ -174,7 +188,7 @@ export default function ChatbotsPage() {
           )
         : chatbotsApi.create(selectedWorkspace.id, formData);
 
-      await promise;
+      const result = await promise;
 
       toast.success(
         editingChatbot
@@ -190,6 +204,17 @@ export default function ChatbotsPage() {
       setShowForm(false);
       setEditingChatbot(null);
       await loadChatbots();
+
+      // If created new chatbot, open tools dialog to assign plugins
+      if (!editingChatbot) {
+         // Show success message with hint
+        toast.message("Tiếp theo: Gán Plugins", {
+          description: "Hãy chọn các công cụ/plugins cho chatbot này.",
+        });
+        
+        setSelectedChatbotForTools(result);
+        setToolsDialogOpen(true);
+      }
     } catch (err: any) {
       const message =
         err?.response?.data?.message ||
@@ -583,8 +608,9 @@ export default function ChatbotsPage() {
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                          <Bot className="w-5 h-5 text-primary" />
+                        <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center relative group cursor-pointer" onClick={() => handleChat(chatbot)}>
+                          <Bot className="w-5 h-5 text-primary group-hover:opacity-0 transition-opacity absolute" />
+                          <MessageSquare className="w-5 h-5 text-primary opacity-0 group-hover:opacity-100 transition-opacity absolute" />
                         </div>
                         <div>
                           <CardTitle className="text-lg">
@@ -602,9 +628,17 @@ export default function ChatbotsPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleChat(chatbot)}>
+                            <MessageSquare className="w-4 h-4 mr-2" />
+                            Chat thử
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => router.push(`/chatbots/${chatbot.id}/settings`)}>
+                            <Settings className="w-4 h-4 mr-2" />
+                            Cài đặt
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleEdit(chatbot)}>
                             <Edit className="w-4 h-4 mr-2" />
-                            Chinh sua
+                            Chỉnh sửa
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleOpenTools(chatbot)}>
                             <Plug className="w-4 h-4 mr-2" />
@@ -702,6 +736,17 @@ export default function ChatbotsPage() {
             workspaceId={selectedWorkspace.id}
             chatbotId={selectedChatbotForTools.id}
             chatbotName={selectedChatbotForTools.name}
+          />
+        )}
+
+        {/* Chat Dialog */}
+        {selectedChatbotForChat && selectedWorkspace && (
+          <ChatbotChatDialog
+            open={chatDialogOpen}
+            onOpenChange={setChatDialogOpen}
+            workspaceId={selectedWorkspace.id}
+            chatbotId={selectedChatbotForChat.id}
+            chatbotName={selectedChatbotForChat.name}
           />
         )}
       </div>
