@@ -32,6 +32,7 @@ import {
   workspaceToolsApi,
   chatbotToolsApi,
   type Tool,
+  type Plugin,
   type ChatbotTool,
   type PluginAction,
 } from "@/lib/api";
@@ -87,7 +88,7 @@ export function ChatbotToolsDialog({
   chatbotId,
   chatbotName,
 }: ChatbotToolsDialogProps) {
-  const [allTools, setAllTools] = useState<Tool[]>([]);
+  const [allTools, setAllTools] = useState<Plugin[]>([]);
   const [chatbotTools, setChatbotTools] = useState<ChatbotTool[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
@@ -142,28 +143,37 @@ export function ChatbotToolsDialog({
     return enabledActions.includes(actionId);
   };
 
-  const handleToggleTool = async (tool: Tool, enabled: boolean) => {
+  const handleToggleTool = async (tool: Plugin, enabled: boolean) => {
     try {
       setUpdating(tool.id);
 
-      await chatbotToolsApi.update(workspaceId, chatbotId, tool.id, {
+      const updatedChatbotTool = await chatbotToolsApi.update(workspaceId, chatbotId, tool.id, {
         is_enabled: enabled,
       });
 
       // Update local state
       if (enabled) {
-        // Add to enabled tools
-        const updatedTool: ChatbotTool = {
-          ...tool,
-          workspace_tool: null,
-          user_auth_status: null,
-          chatbot_tool: {
-            is_enabled: true,
-            // When enabling tool, enable all actions by default or as per API response
-            // For now, we'll assume the API handles default actions
-          },
-        };
-        setChatbotTools((prev) => [...prev.filter(t => t.id !== tool.id), updatedTool]);
+        // Add to enabled tools (removing any existing entry first)
+        setChatbotTools((prev) => {
+          const filtered = prev.filter((t) => {
+            const tId = (t as any).tool?.id || t.id;
+            return tId !== tool.id;
+          });
+          
+          // Construct proper ChatbotTool object
+          // The API returns the relationship data, but our UI expects { ...tool, chatbot_tool: { ... } }
+          const newEntry: ChatbotTool = {
+            ...tool,
+            chatbot_tool: {
+              is_enabled: updatedChatbotTool.is_enabled !== undefined 
+                ? updatedChatbotTool.is_enabled 
+                : (updatedChatbotTool as any).chatbot_tool?.is_enabled ?? true,
+              config_override: updatedChatbotTool.chatbot_tool?.config_override
+            }
+          };
+
+          return [...filtered, newEntry];
+        });
         // Expand to show actions
         setExpandedTools(prev => ({ ...prev, [tool.id]: true }));
       } else {
@@ -193,7 +203,7 @@ export function ChatbotToolsDialog({
     }
   };
 
-  const handleToggleAction = async (tool: Tool, actionId: string, enabled: boolean) => {
+  const handleToggleAction = async (tool: Plugin, actionId: string, enabled: boolean) => {
     try {
       // Don't set updating for the whole tool to avoid disabling the switch
       // But maybe we should show some loading indicator for the action

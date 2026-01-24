@@ -92,6 +92,7 @@ function PluginsContent() {
   const [workspacePlugins, setWorkspacePlugins] = useState<Plugin[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [updatingPlugin, setUpdatingPlugin] = useState<string | null>(null);
   const [addingPlugin, setAddingPlugin] = useState<string | null>(null);
   
@@ -131,11 +132,11 @@ function PluginsContent() {
     }
   }, [selectedWorkspace]);
 
-  const loadPlugins = async () => {
+  const loadPlugins = async (background = false) => {
     if (!selectedWorkspace) return;
 
     try {
-      setLoading(true);
+      if (!background) setLoading(true);
       // Load both all available plugins and installed workspace plugins
       const [globalData, workspaceData] = await Promise.all([
         workspaceToolsApi.list(selectedWorkspace.id),
@@ -149,7 +150,7 @@ function PluginsContent() {
         description: err?.response?.data?.message || "Unknown error",
       });
     } finally {
-      setLoading(false);
+      if (!background) setLoading(false);
     }
   };
 
@@ -164,7 +165,7 @@ function PluginsContent() {
       });
       
       toast.success(`Đã thêm ${plugin.display_name} vào workspace`);
-      loadPlugins();
+      loadPlugins(true);
     } catch (err: any) {
       console.error("Error adding plugin:", err);
       toast.error("Không thể thêm plugin", {
@@ -231,7 +232,7 @@ function PluginsContent() {
     try {
       await workspaceToolsApi.remove(selectedWorkspace.id, plugin.id);
       toast.success(`Đã xóa ${plugin.display_name} khỏi workspace`);
-      loadPlugins();
+      loadPlugins(true);
     } catch (err: any) {
       console.error("Error removing plugin:", err);
       toast.error("Không thể xóa plugin", {
@@ -241,12 +242,12 @@ function PluginsContent() {
   };
 
   const handleOAuthConnected = () => {
-    loadPlugins();
+    loadPlugins(true);
     setOAuthDialogOpen(false);
   };
 
   const handleApiKeyConfigured = () => {
-    loadPlugins();
+    loadPlugins(true);
     setApiKeyDialogOpen(false);
   };
 
@@ -293,6 +294,13 @@ function PluginsContent() {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
+            name="search_p_q"
+            autoComplete="new-password"
+            autoCorrect="off"
+            spellCheck={false}
+            readOnly={!isSearchFocused}
+            onFocus={() => setIsSearchFocused(true)}
+            onBlur={() => setIsSearchFocused(false)}
             placeholder="Tìm kiếm plugin..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
