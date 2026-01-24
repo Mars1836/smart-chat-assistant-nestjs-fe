@@ -5,6 +5,7 @@
 import client from "../client";
 import { messagesEndpoints } from "./endpoints";
 import type { PaginatedResponse } from "../workspaces/workspaces-api";
+import type { ChatFile } from "../chatbots/chatbots-api";
 
 // Types
 export interface MessageResponseDto {
@@ -16,6 +17,7 @@ export interface MessageResponseDto {
   intent_id: string | null;
   created_at: string;
   updated_at: string;
+  attachments?: ChatFile[];
 }
 
 export interface ListMessagesParams {

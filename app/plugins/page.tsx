@@ -267,6 +267,13 @@ function PluginsContent() {
       p.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const isApiKeyConfigured = (plugin: Plugin) => {
+    if (!plugin.workspace_tool?.config_override) return false;
+    const paramName = plugin.auth_config?.api_key?.param_name;
+    if (!paramName) return false;
+    return !!plugin.workspace_tool.config_override[paramName];
+  };
+
   if (loading) {
     return (
       <AppLayout activeModule="plugins">
@@ -504,7 +511,7 @@ function PluginsContent() {
 
                             {authType === "api_key" && (
                               <div className="mt-3">
-                                {plugin.workspace_tool?.api_key_configured ? (
+                                {isApiKeyConfigured(plugin) ? (
                                   <div className="flex items-center gap-2 text-sm">
                                     <CheckCircle2 className="w-4 h-4 text-green-500" />
                                     <span className="text-green-600 font-medium">API Key configured</span>

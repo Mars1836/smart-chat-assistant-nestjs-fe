@@ -22,7 +22,10 @@ import {
   type Chatbot,
   type ConversationResponseDto,
   type MessageResponseDto,
+  type ChatFile,
 } from "@/lib/api";
+import { API_BASE_URL } from "@/lib/constants";
+import { FileIcon, Download } from "lucide-react";
 import { toast } from "sonner";
 
 interface Message {
@@ -30,6 +33,7 @@ interface Message {
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
+  files?: ChatFile[];
 }
 
 export default function ChatPage() {
@@ -55,6 +59,11 @@ export default function ChatPage() {
   const [loadingChatbot, setLoadingChatbot] = useState(false);
   const [loadingConversations, setLoadingConversations] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
+
+  const getFileUrl = (url: string) => {
+    if (url.startsWith("http")) return url;
+    return `${API_BASE_URL}${url}`;
+  };
 
   // Load workspaces on mount
   useEffect(() => {
@@ -163,6 +172,7 @@ export default function ChatPage() {
         role: msg.sender_type === "user" ? "user" : "assistant" as const,
         content: msg.content,
         timestamp: new Date(msg.created_at),
+        files: msg.attachments,
       }));
     } catch (err) {
       console.error("Error loading messages:", err);
@@ -294,6 +304,7 @@ export default function ChatPage() {
         role: "assistant",
         content: response.response,
         timestamp: new Date(),
+        files: response.files,
       };
       setMessages((prev) => [...prev, aiMessage]);
     } catch (err) {
@@ -484,7 +495,47 @@ export default function ChatPage() {
                       : "bg-muted text-foreground"
                   }`}
                 >
-                  <p className="text-sm">{message.content}</p>
+                  <p className="text-sm decoration-slice whitespace-pre-wrap">{message.content}</p>
+                  
+                  {message.files && message.files.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      {message.files.map((file, index) => {
+                        if (file.type === "image") {
+                          return (
+                            <div key={index} className="rounded-lg overflow-hidden border bg-background/50">
+                              <img 
+                                src={getFileUrl(file.url)} 
+                                alt={file.filename}
+                                className="w-full h-auto max-h-[300px] object-contain"
+                              />
+                            </div>
+                          );
+                        }
+                        return (
+                          <div key={index} className="flex items-center gap-3 p-3 rounded-lg border bg-background/50 hover:bg-background transition-colors">
+                            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                              <FileIcon className="w-5 h-5 text-primary" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium truncate text-sm">{file.filename}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {file.size ? `${(file.size / 1024).toFixed(1)} KB` : "Unknown size"}
+                              </p>
+                            </div>
+                            <a 
+                              href={getFileUrl(file.url)} 
+                              download={file.filename}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-muted transition-colors"
+                            >
+                              <Download className="w-4 h-4 text-muted-foreground" />
+                            </a>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </Card>
               </div>
             ))}

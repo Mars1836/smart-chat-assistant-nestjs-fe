@@ -63,11 +63,20 @@ export interface ChatDto {
   message: string;
 }
 
+export interface ChatFile {
+  type: "image" | "file";
+  url: string;
+  filename: string;
+  mime_type?: string;
+  size: number;
+}
+
 export interface ChatResponseDto {
   conversation_id?: string;
   response: string;
   model: string;
   processingTime: number;
+  files?: ChatFile[];
 }
 
 export interface ListChatbotsParams {

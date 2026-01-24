@@ -10,11 +10,14 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Send, Bot, User } from "lucide-react";
+import { Loader2, Send, Bot, User, FileIcon, Download } from "lucide-react";
 import {
   chatsApi,
   conversationsApi,
+  messagesApi,
+  type ChatFile,
 } from "@/lib/api";
+import { API_BASE_URL } from "@/lib/constants";
 
 interface ChatbotChatDialogProps {
   open: boolean;
@@ -30,6 +33,7 @@ interface Message {
   content: string;
   timestamp: Date;
   isError?: boolean;
+  files?: ChatFile[];
 }
 
 export function ChatbotChatDialog({
@@ -46,17 +50,62 @@ export function ChatbotChatDialog({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const getFileUrl = (url: string) => {
+    if (url.startsWith("http")) return url;
+    return `${API_BASE_URL}${url}`;
+  };
+
   // Scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Focus input on open
+  // Load history on open
   useEffect(() => {
     if (open) {
+      loadHistory();
       setTimeout(() => inputRef.current?.focus(), 100);
     }
-  }, [open]);
+  }, [open, chatbotId]);
+
+  const loadHistory = async () => {
+    try {
+      // 1. Find existing conversation
+      const convs = await conversationsApi.listByChatbot(chatbotId, {
+        limit: 1,
+        sortBy: "created_at",
+        sortOrder: "DESC",
+      });
+
+      if (convs.data.length > 0) {
+        const lastConv = convs.data[0];
+        setConversationId(lastConv.id);
+
+        // 2. Load messages
+        const history = await messagesApi.listByConversation(lastConv.id, {
+          limit: 100,
+          sortBy: "created_at",
+          sortOrder: "ASC",
+        });
+
+        const mappedMessages: Message[] = history.data.map((msg) => ({
+          id: msg.id,
+          role: msg.sender_type === "bot" ? "assistant" : "user",
+          content: msg.content,
+          timestamp: new Date(msg.created_at),
+          files: msg.attachments, // Map attachments to files
+        }));
+
+        setMessages(mappedMessages);
+      } else {
+        setMessages([]);
+        setConversationId(null);
+      }
+    } catch (err) {
+      console.error("Error loading history:", err);
+      toast.error("Failed to load chat history");
+    }
+  };
 
   const handleSendMessage = async () => {
     if (!inputValue.trim() || sending) return;
@@ -98,6 +147,7 @@ export function ChatbotChatDialog({
         role: "assistant",
         content: response.response,
         timestamp: new Date(),
+        files: response.files,
       };
 
       setMessages((prev) => [...prev, aiMessage]);
@@ -167,6 +217,46 @@ export function ChatbotChatDialog({
                   }`}
                 >
                   <p className="whitespace-pre-wrap">{message.content}</p>
+                  
+                  {message.files && message.files.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      {message.files.map((file, index) => {
+                        if (file.type === "image") {
+                          return (
+                            <div key={index} className="rounded-lg overflow-hidden border">
+                              <img 
+                                src={getFileUrl(file.url)} 
+                                alt={file.filename}
+                                className="w-full h-auto max-h-[300px] object-contain bg-background"
+                              />
+                            </div>
+                          );
+                        }
+                        return (
+                          <div key={index} className="flex items-center gap-3 p-3 rounded-lg border bg-background/50 hover:bg-background transition-colors">
+                            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                              <FileIcon className="w-5 h-5 text-primary" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium truncate text-sm">{file.filename}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {file.size ? `${(file.size / 1024).toFixed(1)} KB` : "Unknown size"}
+                              </p>
+                            </div>
+                            <a 
+                              href={getFileUrl(file.url)} 
+                              download={file.filename}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-muted transition-colors"
+                            >
+                              <Download className="w-4 h-4 text-muted-foreground" />
+                            </a>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
                 {message.role === "user" && (
                   <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center mt-1 shrink-0">

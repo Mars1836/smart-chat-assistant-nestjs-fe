@@ -36,7 +36,10 @@ export function ApiKeyConfigDialog({
   useEffect(() => {
     if (open) {
       setApiKey("");
-      setIsConfigured(plugin.workspace_tool?.api_key_configured || false);
+      
+      const paramName = plugin.auth_config?.api_key?.param_name;
+      const hasKey = paramName && plugin.workspace_tool?.config_override?.[paramName];
+      setIsConfigured(!!hasKey);
     }
   }, [open, plugin]);
 
