@@ -32,6 +32,8 @@ export interface OAuthConfig {
 export interface ApiKeyConfig {
   param_name: string;
   header_name?: string;
+  value?: string;
+  is_set?: boolean;
 }
 
 /**
@@ -290,6 +292,27 @@ export const toolsApi = {
 /**
  * Workspace Tools API
  */
+/**
+ * DTO for creating custom tool
+ */
+export interface CreateCustomToolDto {
+  name: string;
+  display_name: string;
+  description: string;
+  executor_type: "http_api";
+  executor_config: {
+    method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
+    endpoint: string;
+  };
+  auth_config?: {
+    type: "api_key";
+    api_key: {
+      header_name: string;
+      value?: string;
+    }
+  };
+}
+
 export const workspaceToolsApi = {
   /**
    * List all available plugins (builtin + custom) for browsing and adding
@@ -330,6 +353,20 @@ export const workspaceToolsApi = {
   ): Promise<Plugin> => {
     const response = await client.post<Plugin>(
       workspaceToolsEndpoints.add(workspaceId),
+      data
+    );
+    return response.data;
+  },
+
+  /**
+   * Create custom tool in workspace
+   */
+  createCustom: async (
+    workspaceId: string,
+    data: CreateCustomToolDto
+  ): Promise<Plugin> => {
+    const response = await client.post<Plugin>(
+      workspaceToolsEndpoints.custom(workspaceId),
       data
     );
     return response.data;

@@ -19,7 +19,8 @@ export const chatsApi = {
   ): Promise<ChatResponseDto> => {
     const response = await client.post<ChatResponseDto>(
       chatsEndpoints.sendMessage(workspaceId, chatbotId),
-      { message }
+      { message },
+      { timeout: 300000 } // 5 minutes
     );
     return response.data;
   },
@@ -41,7 +42,8 @@ export const chatsApi = {
 
     const response = await client.post<ChatResponseDto>(
       chatsEndpoints.sendMessage(workspaceId, chatbotId),
-      payload
+      payload,
+      { timeout: 300000 } // 5 minutes
     );
     return response.data;
   },

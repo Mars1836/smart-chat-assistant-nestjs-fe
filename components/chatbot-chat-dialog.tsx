@@ -208,7 +208,7 @@ export function ChatbotChatDialog({
                   </div>
                 )}
                 <div
-                  className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${
+                  className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm group ${
                     message.role === "user"
                       ? "bg-primary text-primary-foreground rounded-br-none"
                       : message.isError 
@@ -257,6 +257,12 @@ export function ChatbotChatDialog({
                       })}
                     </div>
                   )}
+                  <p className="text-[10px] text-right mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {message.timestamp.toLocaleTimeString("vi-VN", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </p>
                 </div>
                 {message.role === "user" && (
                   <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center mt-1 shrink-0">

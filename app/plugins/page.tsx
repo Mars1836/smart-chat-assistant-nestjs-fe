@@ -46,6 +46,7 @@ import {
 import { OAuthConnectDialog } from "@/components/oauth-connect-dialog";
 import { ApiKeyConfigDialog } from "@/components/api-key-config-dialog";
 import { PluginActionsDialog } from "@/components/plugin-actions-dialog";
+import { CreateToolDialog } from "@/components/create-tool-dialog"; // Added
 
 // Icon mapping for tool types
 const getToolIcon = (name: string, executorType?: string) => {
@@ -63,7 +64,9 @@ const getToolIcon = (name: string, executorType?: string) => {
 };
 
 // Auth type badge
-const getAuthBadge = (authType: string) => {
+const getAuthBadge = (plugin: Plugin) => {
+  const authType = plugin.auth_config?.type || "none";
+
   switch (authType) {
     case "none":
       return null;
@@ -75,6 +78,9 @@ const getAuthBadge = (authType: string) => {
         </Badge>
       );
     case "api_key":
+      // Hide badge if system set
+      if (plugin.auth_config?.api_key?.is_set) return null;
+      
       return (
         <Badge variant="outline" className="gap-1 font-normal">
           <Key className="w-3 h-3" />
@@ -103,6 +109,8 @@ function PluginsContent() {
   const [oauthDialogOpen, setOAuthDialogOpen] = useState(false);
   const [apiKeyDialogOpen, setApiKeyDialogOpen] = useState(false);
   const [actionsDialogOpen, setActionsDialogOpen] = useState(false);
+  const [createToolDialogOpen, setCreateToolDialogOpen] = useState(false);
+
   const [selectedPlugin, setSelectedPlugin] = useState<Plugin | null>(null);
 
   const canManagePlugins = hasPermission("chatbot.update") || true;
@@ -251,6 +259,10 @@ function PluginsContent() {
     setApiKeyDialogOpen(false);
   };
 
+  const handleToolCreated = () => {
+    loadPlugins(true);
+  };
+
   // Get workspace plugin IDs for checking if a global plugin is already added
   const workspacePluginIds = new Set(workspacePlugins.map(p => p.id));
 
@@ -268,8 +280,12 @@ function PluginsContent() {
   );
 
   const isApiKeyConfigured = (plugin: Plugin) => {
+    // Check if there's a default/system-provided key or it's marked as set by backend
+    if (plugin.auth_config?.api_key?.value || plugin.auth_config?.api_key?.is_set) return true;
+
+    // Check if there's a user override
     if (!plugin.workspace_tool?.config_override) return false;
-    const paramName = plugin.auth_config?.api_key?.param_name;
+    const paramName = plugin.auth_config?.api_key?.param_name || plugin.auth_config?.api_key?.header_name;
     if (!paramName) return false;
     return !!plugin.workspace_tool.config_override[paramName];
   };
@@ -295,6 +311,17 @@ function PluginsContent() {
           <p className="text-muted-foreground mt-1">
             Quản lý các plugin cho workspace của bạn
           </p>
+        </div>
+
+        {/* Create Tool - Added */}
+        <div className="flex justify-end">
+          <Button 
+            onClick={() => setCreateToolDialogOpen(true)}
+            className="gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Create Tool
+          </Button>
         </div>
 
         {/* Search */}
@@ -378,7 +405,7 @@ function PluginsContent() {
                                 {tool.display_name}
                               </h3>
                               <Badge variant="outline">{tool.category}</Badge>
-                              {getAuthBadge(authType)}
+                              {getAuthBadge(tool)}
                             </div>
                             <p className="text-sm text-muted-foreground line-clamp-2">
                               {tool.description}
@@ -468,7 +495,7 @@ function PluginsContent() {
                                 {plugin.display_name}
                               </h3>
                               <Badge variant="outline">{plugin.category}</Badge>
-                              {getAuthBadge(authType)}
+                              {getAuthBadge(plugin)}
                             </div>
                             <p className="text-sm text-muted-foreground line-clamp-2">
                               {plugin.description}
@@ -509,7 +536,7 @@ function PluginsContent() {
                               </div>
                             )}
 
-                            {authType === "api_key" && (
+                            {authType === "api_key" && !plugin.auth_config?.api_key?.is_set && (
                               <div className="mt-3">
                                 {isApiKeyConfigured(plugin) ? (
                                   <div className="flex items-center gap-2 text-sm">
@@ -610,7 +637,18 @@ function PluginsContent() {
               onOpenChange={setActionsDialogOpen}
               plugin={selectedPlugin}
             />
+
           </>
+        )}
+
+        {/* Create Tool Dialog */}
+        {selectedWorkspace && (
+          <CreateToolDialog
+            open={createToolDialogOpen}
+            onOpenChange={setCreateToolDialogOpen}
+            workspaceId={selectedWorkspace.id}
+            onToolCreated={handleToolCreated}
+          />
         )}
       </div>
     </AppLayout>

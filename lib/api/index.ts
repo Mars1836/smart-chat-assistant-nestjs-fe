@@ -119,6 +119,7 @@ export {
   type ExecuteToolDto,
   type ExecuteToolResponseDto,
   type ListToolsParams,
+  type CreateCustomToolDto,
 } from "./tools/tools-api";
 export {
   toolsEndpoints,

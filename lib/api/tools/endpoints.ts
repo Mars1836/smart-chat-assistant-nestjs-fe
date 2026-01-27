@@ -25,6 +25,9 @@ export const workspaceToolsEndpoints = {
   // Add plugin to workspace
   add: (workspaceId: string) => WORKSPACE_TOOLS_BASE(workspaceId),
 
+  // Create custom tool in workspace
+  custom: (workspaceId: string) => `${WORKSPACE_TOOLS_BASE(workspaceId)}/custom`,
+
   // Get single plugin details
   get: (workspaceId: string, toolId: string) =>
     `${WORKSPACE_TOOLS_BASE(workspaceId)}/${toolId}`,

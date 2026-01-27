@@ -29,6 +29,7 @@ import {
   Plug,
   Settings,
   MessageSquare,
+  Book, // Added
 } from "lucide-react";
 import { useWorkspace } from "@/lib/stores/workspace-store";
 import {
@@ -40,6 +41,7 @@ import {
 } from "@/lib/api";
 import { ChatbotToolsDialog } from "@/components/chatbot-tools-dialog";
 import { ChatbotChatDialog } from "@/components/chatbot-chat-dialog";
+import { ChatbotKnowledgeDialog } from "@/components/chatbot-knowledge-dialog"; // Added
 
 export default function ChatbotsPage() {
   const router = useRouter(); // Need to add import { useRouter } from "next/navigation" if not present, but wait, it is imported in line 19? No.
@@ -61,6 +63,10 @@ export default function ChatbotsPage() {
   const [toolsDialogOpen, setToolsDialogOpen] = useState(false);
   const [selectedChatbotForTools, setSelectedChatbotForTools] = useState<Chatbot | null>(null);
 
+  // Knowledge dialog state
+  const [knowledgeDialogOpen, setKnowledgeDialogOpen] = useState(false);
+  const [selectedChatbotForKnowledge, setSelectedChatbotForKnowledge] = useState<Chatbot | null>(null);
+
   // Chat dialog state
   const [chatDialogOpen, setChatDialogOpen] = useState(false);
   const [selectedChatbotForChat, setSelectedChatbotForChat] = useState<Chatbot | null>(null);
@@ -74,7 +80,6 @@ export default function ChatbotsPage() {
     fallback_message: "",
     confidence_threshold: 0.7,
     max_context_turns: 5,
-    enable_learning: true,
     llm_provider: "google-ai-studio",
     llm_model: "gemini-2.0-flash-lite",
     temperature: 0.7,
@@ -132,7 +137,6 @@ export default function ChatbotsPage() {
       fallback_message: "",
       confidence_threshold: 0.7,
       max_context_turns: 5,
-      enable_learning: true,
       llm_provider: "google-ai-studio",
       llm_model: "gemini-2.0-flash-lite",
       temperature: 0.7,
@@ -151,7 +155,6 @@ export default function ChatbotsPage() {
       fallback_message: chatbot.fallback_message || "",
       confidence_threshold: chatbot.confidence_threshold,
       max_context_turns: chatbot.max_context_turns,
-      enable_learning: chatbot.enable_learning,
       llm_provider: chatbot.llm_provider,
       llm_model: chatbot.llm_model,
       temperature: chatbot.temperature,
@@ -163,6 +166,11 @@ export default function ChatbotsPage() {
   const handleOpenTools = (chatbot: Chatbot) => {
     setSelectedChatbotForTools(chatbot);
     setToolsDialogOpen(true);
+  };
+
+  const handleOpenKnowledge = (chatbot: Chatbot) => {
+    setSelectedChatbotForKnowledge(chatbot);
+    setKnowledgeDialogOpen(true);
   };
 
   const handleChat = (chatbot: Chatbot) => {
@@ -524,27 +532,6 @@ export default function ChatbotsPage() {
                     }
                   />
                 </div>
-
-                <div className="flex items-center gap-2 md:col-span-2">
-                  <input
-                    type="checkbox"
-                    id="enable_learning"
-                    checked={formData.enable_learning}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        enable_learning: e.target.checked,
-                      })
-                    }
-                    className="w-4 h-4 rounded border-input"
-                  />
-                  <label
-                    htmlFor="enable_learning"
-                    className="text-sm font-medium"
-                  >
-                    Cho phép học từ feedback
-                  </label>
-                </div>
               </div>
 
               <div className="flex justify-end gap-2 pt-4">
@@ -644,6 +631,10 @@ export default function ChatbotsPage() {
                             <Plug className="w-4 h-4 mr-2" />
                             Plugins
                           </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleOpenKnowledge(chatbot)}>
+                            <Book className="w-4 h-4 mr-2" />
+                            Knowledge
+                          </DropdownMenuItem>
                           <DropdownMenuItem
                             className="text-destructive"
                             onClick={() => handleDelete(chatbot)}
@@ -669,9 +660,6 @@ export default function ChatbotsPage() {
                       )}
                       <div className="flex items-center gap-4 text-xs text-muted-foreground">
                         <span>Enabled: {chatbot.enabled ? "✓" : "✗"}</span>
-                        <span>
-                          Learning: {chatbot.enable_learning ? "✓" : "✗"}
-                        </span>
                       </div>
                       <p className="text-xs text-muted-foreground">
                         Created:{" "}
@@ -736,6 +724,17 @@ export default function ChatbotsPage() {
             workspaceId={selectedWorkspace.id}
             chatbotId={selectedChatbotForTools.id}
             chatbotName={selectedChatbotForTools.name}
+          />
+        )}
+
+        {/* Knowledge Dialog */}
+        {selectedChatbotForKnowledge && selectedWorkspace && (
+          <ChatbotKnowledgeDialog
+            open={knowledgeDialogOpen}
+            onOpenChange={setKnowledgeDialogOpen}
+            workspaceId={selectedWorkspace.id}
+            chatbotId={selectedChatbotForKnowledge.id}
+            chatbotName={selectedChatbotForKnowledge.name}
           />
         )}
 

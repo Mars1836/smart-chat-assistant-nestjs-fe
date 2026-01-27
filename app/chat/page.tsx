@@ -489,7 +489,7 @@ export default function ChatPage() {
                 }`}
               >
                 <Card
-                  className={`max-w-md px-4 py-3 ${
+                  className={`max-w-md px-4 py-3 group ${
                     message.role === "user"
                       ? "bg-primary text-primary-foreground border-0"
                       : "bg-muted text-foreground"
@@ -536,6 +536,14 @@ export default function ChatPage() {
                       })}
                     </div>
                   )}
+                  <p className={`text-[10px] mt-1 text-right opacity-0 group-hover:opacity-100 transition-opacity ${
+                    message.role === "user" ? "text-primary-foreground/70" : "text-muted-foreground"
+                  }`}>
+                    {message.timestamp.toLocaleTimeString("vi-VN", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </p>
                 </Card>
               </div>
             ))}

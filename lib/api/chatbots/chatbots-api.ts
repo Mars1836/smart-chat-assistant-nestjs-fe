@@ -14,7 +14,6 @@ export interface CreateChatbotDto {
   fallback_message?: string;
   confidence_threshold?: number;
   max_context_turns?: number;
-  enable_learning?: boolean;
   llm_provider?: string;
   llm_model?: string;
   temperature?: number;
@@ -29,7 +28,6 @@ export interface UpdateChatbotDto {
   fallback_message?: string;
   confidence_threshold?: number;
   max_context_turns?: number;
-  enable_learning?: boolean;
   llm_provider?: string;
   llm_model?: string;
   temperature?: number;
@@ -47,7 +45,6 @@ export interface Chatbot {
   fallback_message: string | null;
   confidence_threshold: number;
   max_context_turns: number;
-  enable_learning: boolean;
   llm_provider: string;
   llm_model: string;
   temperature: number;
