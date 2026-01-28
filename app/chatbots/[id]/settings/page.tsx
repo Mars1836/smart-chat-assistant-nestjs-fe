@@ -4,6 +4,7 @@
 import { Suspense, use } from "react";
 import { AppLayout } from "@/components/app-layout";
 import { ChatbotKnowledgeSettings } from "@/components/knowledge/chatbot-knowledge-settings";
+import { WidgetConfigSettings } from "@/components/widget/widget-config-settings";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChevronLeft, Loader2 } from "lucide-react";
@@ -36,6 +37,7 @@ function ChatbotSettingsContent({ id }: { id: string }) {
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="knowledge">Knowledge</TabsTrigger>
             <TabsTrigger value="plugins">Plugins</TabsTrigger>
+            <TabsTrigger value="widget">Widget</TabsTrigger>
             <TabsTrigger value="advanced">Advanced</TabsTrigger>
           </TabsList>
           
@@ -53,6 +55,10 @@ function ChatbotSettingsContent({ id }: { id: string }) {
              <div className="p-4 border rounded-lg bg-muted/10 text-center text-muted-foreground">
                 Plugins settings (Use the Plugins dialog in the list page for now)
             </div>
+          </TabsContent>
+
+          <TabsContent value="widget" className="mt-6">
+             <WidgetConfigSettings chatbotId={id} />
           </TabsContent>
           
           <TabsContent value="advanced" className="mt-6">

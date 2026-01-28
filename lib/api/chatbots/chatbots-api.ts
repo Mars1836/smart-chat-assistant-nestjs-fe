@@ -32,6 +32,7 @@ export interface UpdateChatbotDto {
   llm_model?: string;
   temperature?: number;
   max_tokens?: number;
+  widget_config?: WidgetConfig;
 }
 
 export interface Chatbot {
@@ -54,6 +55,17 @@ export interface Chatbot {
   created_by_id: string | null;
   created_by?: any | null;
   workspace?: any;
+  widget_config?: WidgetConfig | null;
+}
+
+export interface WidgetConfig {
+  enabled: boolean;
+  position: "bottom-right" | "bottom-left";
+  primaryColor: string;
+  title: string;
+  greeting: string;
+  allowedOrigins: string[];
+  lang: "vi" | "en";
 }
 
 export interface ChatDto {

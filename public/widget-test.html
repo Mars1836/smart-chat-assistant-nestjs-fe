@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Widget Test Page</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 0;
+      padding: 40px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      color: white;
+    }
+    h1 { margin-bottom: 20px; }
+    p { opacity: 0.9; line-height: 1.6; }
+    .card {
+      background: rgba(255,255,255,0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      padding: 30px;
+      max-width: 600px;
+      margin-top: 30px;
+    }
+    code {
+      background: rgba(0,0,0,0.2);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🤖 Smart Chat Widget Test</h1>
+  <p>Đây là trang test để kiểm tra widget chat.</p>
+  
+  <div class="card">
+    <h3>Hướng dẫn</h3>
+    <p>1. Nhấn vào nút chat ở góc phải dưới màn hình</p>
+    <p>2. Gõ tin nhắn và nhấn Enter hoặc nút Gửi</p>
+    <p>3. Widget sẽ gọi API tại <code>/widget/chat/:chatbotId</code></p>
+    <p><strong>Lưu ý:</strong> Để chat hoạt động, backend cần có endpoint public cho widget.</p>
+  </div>
+
+  <!-- Widget Script -->
+  <script
+    src="http://localhost:3000/widget.js"
+    data-chatbot-id="test-chatbot-123"
+    data-widget-origin="http://localhost:3000"
+    data-api-base="http://localhost:4000"
+    data-position="bottom-right"
+    data-color="#4f46e5"
+    data-lang="vi"
+  ></script>
+</body>
+</html>

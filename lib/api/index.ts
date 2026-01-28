@@ -42,6 +42,7 @@ export {
   type ChatResponseDto,
   type ChatFile,
   type ListChatbotsParams,
+  type WidgetConfig,
 } from "./chatbots/chatbots-api";
 export { chatbotsEndpoints } from "./chatbots/endpoints";
 
