@@ -52,6 +52,39 @@ export function WidgetConfigSettings({ chatbotId }: WidgetConfigSettingsProps) {
     }
   }, [selectedWorkspace, chatbotId]);
 
+  // Inject real widget.js when preview is enabled
+  useEffect(() => {
+    if (!showPreview) {
+      // Remove widget when preview is disabled
+      const existingScript = document.getElementById('scw-preview-script');
+      const existingContainer = document.querySelector('.scw-widget-container');
+      if (existingScript) existingScript.remove();
+      if (existingContainer) existingContainer.remove();
+      (window as any).__SmartChatWidget = false;
+      return;
+    }
+
+    // Add widget script
+    const script = document.createElement('script');
+    script.id = 'scw-preview-script';
+    script.src = `${widgetUrl}/widget.js`;
+    script.setAttribute('data-chatbot-id', chatbotId);
+    script.setAttribute('data-widget-origin', widgetUrl);
+    script.setAttribute('data-api-base', apiUrl);
+    script.setAttribute('data-position', config.position);
+    script.setAttribute('data-color', config.primaryColor);
+    script.setAttribute('data-lang', config.lang);
+    document.body.appendChild(script);
+
+    return () => {
+      const existingScript = document.getElementById('scw-preview-script');
+      const existingContainer = document.querySelector('.scw-widget-container');
+      if (existingScript) existingScript.remove();
+      if (existingContainer) existingContainer.remove();
+      (window as any).__SmartChatWidget = false;
+    };
+  }, [showPreview, config.position, config.primaryColor, config.lang, widgetUrl, apiUrl, chatbotId]);
+
   const loadChatbot = async () => {
     if (!selectedWorkspace) return;
     try {
@@ -111,9 +144,109 @@ export function WidgetConfigSettings({ chatbotId }: WidgetConfigSettingsProps) {
 ></script>`;
   };
 
+  // Framework code snippets
+  type FrameworkType = 'html' | 'react' | 'vue' | 'angular';
+  const [selectedFramework, setSelectedFramework] = useState<FrameworkType>('html');
+
+  const getReactSnippet = () => {
+    return `import { useEffect } from 'react';
+
+function App() {
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = '${widgetUrl}/widget.js';
+    script.setAttribute('data-chatbot-id', '${chatbotId}');
+    script.setAttribute('data-widget-origin', '${widgetUrl}');
+    script.setAttribute('data-api-base', '${apiUrl}');
+    script.setAttribute('data-position', '${config.position}');
+    script.setAttribute('data-color', '${config.primaryColor}');
+    script.setAttribute('data-lang', '${config.lang}');
+    document.body.appendChild(script);
+
+    return () => {
+      document.body.removeChild(script);
+      window.__SmartChatWidget = false;
+    };
+  }, []);
+
+  return <div>Your app content</div>;
+}`;
+  };
+
+  const getVueSnippet = () => {
+    return `<script setup>
+import { onMounted, onUnmounted } from 'vue';
+
+let scriptEl = null;
+
+onMounted(() => {
+  scriptEl = document.createElement('script');
+  scriptEl.src = '${widgetUrl}/widget.js';
+  scriptEl.setAttribute('data-chatbot-id', '${chatbotId}');
+  scriptEl.setAttribute('data-widget-origin', '${widgetUrl}');
+  scriptEl.setAttribute('data-api-base', '${apiUrl}');
+  scriptEl.setAttribute('data-position', '${config.position}');
+  scriptEl.setAttribute('data-color', '${config.primaryColor}');
+  scriptEl.setAttribute('data-lang', '${config.lang}');
+  document.body.appendChild(scriptEl);
+});
+
+onUnmounted(() => {
+  if (scriptEl) document.body.removeChild(scriptEl);
+  window.__SmartChatWidget = false;
+});
+</script>`;
+  };
+
+  const getAngularSnippet = () => {
+    return `import { Component, OnInit, OnDestroy, Renderer2, Inject } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
+
+@Component({
+  selector: 'app-root',
+  template: '<router-outlet></router-outlet>'
+})
+export class AppComponent implements OnInit, OnDestroy {
+  private scriptEl: HTMLScriptElement | null = null;
+
+  constructor(
+    private renderer: Renderer2,
+    @Inject(DOCUMENT) private document: Document
+  ) {}
+
+  ngOnInit() {
+    this.scriptEl = this.renderer.createElement('script');
+    this.scriptEl.src = '${widgetUrl}/widget.js';
+    this.scriptEl.setAttribute('data-chatbot-id', '${chatbotId}');
+    this.scriptEl.setAttribute('data-widget-origin', '${widgetUrl}');
+    this.scriptEl.setAttribute('data-api-base', '${apiUrl}');
+    this.scriptEl.setAttribute('data-position', '${config.position}');
+    this.scriptEl.setAttribute('data-color', '${config.primaryColor}');
+    this.scriptEl.setAttribute('data-lang', '${config.lang}');
+    this.renderer.appendChild(this.document.body, this.scriptEl);
+  }
+
+  ngOnDestroy() {
+    if (this.scriptEl) {
+      this.renderer.removeChild(this.document.body, this.scriptEl);
+    }
+    (window as any).__SmartChatWidget = false;
+  }
+}`;
+  };
+
+  const getCurrentSnippet = () => {
+    switch (selectedFramework) {
+      case 'react': return getReactSnippet();
+      case 'vue': return getVueSnippet();
+      case 'angular': return getAngularSnippet();
+      default: return getScriptSnippet();
+    }
+  };
+
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(getScriptSnippet());
+      await navigator.clipboard.writeText(getCurrentSnippet());
       setCopied(true);
       toast.success("Đã copy mã nhúng");
       setTimeout(() => setCopied(false), 2000);
@@ -307,82 +440,82 @@ export function WidgetConfigSettings({ chatbotId }: WidgetConfigSettingsProps) {
                 </Button>
               </div>
             </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-3">
-                Thêm đoạn mã sau vào website của bạn, trước thẻ{" "}
-                <code className="bg-muted px-1 rounded">&lt;/body&gt;</code>
+            <CardContent className="space-y-4">
+              {/* Framework Tabs */}
+              <div className="flex gap-1 p-1 bg-muted rounded-lg">
+                {[
+                  { id: 'html' as FrameworkType, label: 'HTML', icon: '🌐' },
+                  { id: 'react' as FrameworkType, label: 'React', icon: '⚛️' },
+                  { id: 'vue' as FrameworkType, label: 'Vue', icon: '💚' },
+                  { id: 'angular' as FrameworkType, label: 'Angular', icon: '🅰️' },
+                ].map((fw) => (
+                  <button
+                    key={fw.id}
+                    onClick={() => setSelectedFramework(fw.id)}
+                    className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-all ${
+                      selectedFramework === fw.id
+                        ? 'bg-background shadow-sm text-foreground'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <span className="mr-1">{fw.icon}</span>
+                    {fw.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Description */}
+              <p className="text-sm text-muted-foreground">
+                {selectedFramework === 'html' && (
+                  <>Thêm đoạn mã sau vào website của bạn, trước thẻ <code className="bg-muted px-1 rounded">&lt;/body&gt;</code></>
+                )}
+                {selectedFramework === 'react' && (
+                  <>Thêm đoạn mã sau vào component chính của ứng dụng React</>
+                )}
+                {selectedFramework === 'vue' && (
+                  <>Thêm đoạn mã sau vào App.vue hoặc layout component</>
+                )}
+                {selectedFramework === 'angular' && (
+                  <>Thêm đoạn mã sau vào app.component.ts</>
+                )}
               </p>
-              <pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">
-                <code>{getScriptSnippet()}</code>
+
+              {/* Code Snippet */}
+              <pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto max-h-80">
+                <code>{getCurrentSnippet()}</code>
               </pre>
             </CardContent>
           </Card>
 
-          {/* Preview */}
+          {/* Live Preview */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base flex items-center gap-2">
                   <Eye className="w-4 h-4" />
-                  Preview
+                  Preview trực tiếp
                 </CardTitle>
                 <Button
-                  variant="outline"
+                  variant={showPreview ? "default" : "outline"}
                   size="sm"
                   onClick={() => setShowPreview(!showPreview)}
                 >
-                  {showPreview ? "Ẩn" : "Hiện"} Preview
+                  {showPreview ? "Tắt Preview" : "Bật Preview"}
                 </Button>
               </div>
             </CardHeader>
-            {showPreview && (
-              <CardContent>
-                <div className="relative bg-muted/30 rounded-lg h-64 border">
-                  {/* Widget Button Preview */}
-                  <div
-                    className={`absolute ${
-                      config.position === "bottom-right"
-                        ? "right-4"
-                        : "left-4"
-                    } bottom-4`}
-                  >
-                    <div
-                      className="w-14 h-14 rounded-full shadow-lg flex items-center justify-center cursor-pointer transition-transform hover:scale-110"
-                      style={{ backgroundColor: config.primaryColor }}
-                    >
-                      <svg
-                        className="w-7 h-7 text-white"
-                        fill="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z" />
-                      </svg>
-                    </div>
-                  </div>
-
-                  {/* Mini Chat Window Preview */}
-                  <div
-                    className={`absolute ${
-                      config.position === "bottom-right"
-                        ? "right-4"
-                        : "left-4"
-                    } bottom-20 w-72 bg-background rounded-lg shadow-xl border overflow-hidden`}
-                  >
-                    <div
-                      className="px-4 py-3 text-white font-medium"
-                      style={{ backgroundColor: config.primaryColor }}
-                    >
-                      {config.title || "Widget"}
-                    </div>
-                    <div className="p-4 h-20 flex items-start">
-                      <div className="bg-muted rounded-lg px-3 py-2 text-sm max-w-[80%]">
-                        {config.greeting || chatbot?.greeting_message || "Xin chào!"}
-                      </div>
-                    </div>
-                  </div>
+            <CardContent>
+              {showPreview ? (
+                <div className="bg-green-500/10 border border-green-500/20 text-green-600 dark:text-green-400 px-4 py-3 rounded-lg text-sm">
+                  ✅ Widget đang hiển thị ở góc {config.position === "bottom-right" ? "phải" : "trái"} dưới màn hình.
+                  Click vào nút chat để thử nghiệm!
                 </div>
-              </CardContent>
-            )}
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Bật Preview để xem widget thực tế xuất hiện ở góc màn hình như khi nhúng vào website.
+                </p>
+              )}
+            </CardContent>
           </Card>
 
           {/* Status Info */}

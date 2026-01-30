@@ -94,8 +94,9 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
       z-index: 999999;
+      transform-origin: center center;
     }
     
     .scw-widget-button:hover {
@@ -107,38 +108,46 @@
       width: 28px;
       height: 28px;
       fill: white;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+    
+    .scw-widget-button.scw-hidden {
+      opacity: 0;
+      transform: scale(0);
+      pointer-events: none;
     }
     
     .scw-chat-window {
       position: fixed;
       ${config.position === 'bottom-left' ? 'left: 20px;' : 'right: 20px;'}
-      bottom: 90px;
+      bottom: 20px;
       width: 380px;
       height: 520px;
-      max-height: calc(100vh - 120px);
+      max-height: calc(100vh - 40px);
       background: #fff;
       border-radius: 16px;
       box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-      display: none;
+      display: flex;
       flex-direction: column;
       overflow: hidden;
       z-index: 999998;
-      animation: scw-slide-up 0.3s ease;
-    }
-    
-    @keyframes scw-slide-up {
-      from {
-        opacity: 0;
-        transform: translateY(20px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+      transform-origin: ${config.position === 'bottom-left' ? 'left bottom' : 'right bottom'};
+      opacity: 0;
+      transform: scale(0.15);
+      pointer-events: none;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
     
     .scw-chat-window.scw-open {
-      display: flex;
+      opacity: 1;
+      transform: scale(1);
+      pointer-events: auto;
+    }
+    
+    .scw-chat-window.scw-closing {
+      opacity: 0;
+      transform: scale(0.15);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
     
     .scw-chat-header {
@@ -293,9 +302,9 @@
     @media (max-width: 480px) {
       .scw-chat-window {
         width: calc(100vw - 20px);
-        height: calc(100vh - 100px);
+        height: calc(100vh - 40px);
         ${config.position === 'bottom-left' ? 'left: 10px;' : 'right: 10px;'}
-        bottom: 80px;
+        bottom: 16px;
         border-radius: 12px;
       }
       
@@ -378,13 +387,31 @@
   // Toggle chat window
   function toggleChat(state) {
     const chatWindow = document.getElementById('scw-chat-window');
+    const toggleBtn = document.getElementById('scw-toggle-btn');
     isOpen = state !== undefined ? state : !isOpen;
     
     if (isOpen) {
-      chatWindow.classList.add('scw-open');
-      document.getElementById('scw-input').focus();
+      // Hide the button first, then expand chat window
+      toggleBtn.classList.add('scw-hidden');
+      chatWindow.classList.remove('scw-closing');
+      
+      // Small delay to allow button to start hiding
+      setTimeout(() => {
+        chatWindow.classList.add('scw-open');
+        // Focus input after animation completes
+        setTimeout(() => {
+          document.getElementById('scw-input').focus();
+        }, 400);
+      }, 50);
     } else {
+      // Shrink chat window first, then show button
+      chatWindow.classList.add('scw-closing');
       chatWindow.classList.remove('scw-open');
+      
+      // Show button after chat window starts shrinking
+      setTimeout(() => {
+        toggleBtn.classList.remove('scw-hidden');
+      }, 200);
     }
   }
 
