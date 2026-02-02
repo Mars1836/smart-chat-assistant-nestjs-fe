@@ -5,6 +5,7 @@
 import client from "../client";
 import {
   toolsEndpoints,
+  toolActionsEndpoints,
   workspaceToolsEndpoints,
   chatbotToolsEndpoints,
 } from "./endpoints";
@@ -266,6 +267,85 @@ export interface ListToolsParams {
 // API Functions
 // =============================================================================
 
+export interface ListPluginsParams {
+  category?: "builtin" | "custom" | "community";
+  installed?: boolean;
+  search?: string;
+  sortBy?: "name" | "category" | "created_at";
+  sortOrder?: "asc" | "desc";
+}
+
+/**
+ * DTO for creating a global tool (POST /tools)
+ */
+export interface CreateToolDto {
+  name: string;
+  display_name: string;
+  description: string;
+  category: ToolCategory;
+  executor_type: ToolExecutorType | "http_api";
+  executor_config?: {
+    base_url?: string;
+  };
+  auth_config?: {
+    type: "none" | "api_key" | "oauth2";
+    api_key?: {
+      header_name?: string;
+      param_name?: string;
+      value?: string;
+    };
+  };
+  is_enabled?: boolean;
+  actions?: CreateToolActionDto[];
+}
+
+/**
+ * DTO for updating a global tool (PATCH /tools/:id)
+ */
+export interface UpdateToolDto extends Partial<CreateToolDto> {}
+
+/**
+ * DTO for creating a tool action (POST /tools/:toolId/actions)
+ */
+export interface CreateToolActionDto {
+  name: string;
+  display_name: string;
+  description: string;
+  parameters?: ToolParameterSchema;
+  executor_config?: {
+    method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
+    endpoint: string;
+    params?: Record<string, any>;
+  };
+  sort_order?: number;
+  is_enabled?: boolean;
+}
+
+/**
+ * DTO for updating a tool action (PATCH /tools/:toolId/actions/:actionId)
+ */
+export interface UpdateToolActionDto extends Partial<CreateToolActionDto> {}
+
+/**
+ * Tool Action response type
+ */
+export interface ToolAction {
+  id: string;
+  name: string;
+  display_name: string;
+  description: string;
+  parameters?: ToolParameterSchema;
+  executor_config?: {
+    method: string;
+    endpoint: string;
+    params?: Record<string, any>;
+  };
+  sort_order: number;
+  is_enabled: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
 /**
  * Global Tools API (all available tools)
  */
@@ -287,13 +367,91 @@ export const toolsApi = {
     const response = await client.get<Tool>(toolsEndpoints.get(id));
     return response.data;
   },
+
+  /**
+   * Create a new global tool (builtin/custom)
+   * POST /tools
+   */
+  create: async (data: CreateToolDto): Promise<Tool> => {
+    const response = await client.post<Tool>(toolsEndpoints.create(), data);
+    return response.data;
+  },
+
+  /**
+   * Update a global tool
+   * PATCH /tools/:id
+   */
+  update: async (id: string, data: UpdateToolDto): Promise<Tool> => {
+    const response = await client.patch<Tool>(toolsEndpoints.update(id), data);
+    return response.data;
+  },
+};
+
+/**
+ * Tool Actions API - Manage actions for a tool
+ */
+export const toolActionsApi = {
+  /**
+   * List all actions for a tool
+   */
+  list: async (toolId: string): Promise<ToolAction[]> => {
+    const response = await client.get<ToolAction[]>(
+      toolActionsEndpoints.list(toolId)
+    );
+    return response.data;
+  },
+
+  /**
+   * Create a new action for a tool
+   * POST /tools/:toolId/actions
+   */
+  create: async (toolId: string, data: CreateToolActionDto): Promise<ToolAction> => {
+    const response = await client.post<ToolAction>(
+      toolActionsEndpoints.create(toolId),
+      data
+    );
+    return response.data;
+  },
+
+  /**
+   * Get a single action
+   */
+  get: async (toolId: string, actionId: string): Promise<ToolAction> => {
+    const response = await client.get<ToolAction>(
+      toolActionsEndpoints.get(toolId, actionId)
+    );
+    return response.data;
+  },
+
+  /**
+   * Update an action
+   * PATCH /tools/:toolId/actions/:actionId
+   */
+  update: async (
+    toolId: string,
+    actionId: string,
+    data: UpdateToolActionDto
+  ): Promise<ToolAction> => {
+    const response = await client.patch<ToolAction>(
+      toolActionsEndpoints.update(toolId, actionId),
+      data
+    );
+    return response.data;
+  },
+
+  /**
+   * Delete an action
+   */
+  delete: async (toolId: string, actionId: string): Promise<void> => {
+    await client.delete(toolActionsEndpoints.delete(toolId, actionId));
+  },
 };
 
 /**
  * Workspace Tools API
  */
 /**
- * DTO for creating custom tool
+ * DTO for creating custom tool in workspace
  */
 export interface CreateCustomToolDto {
   name: string;
@@ -301,8 +459,7 @@ export interface CreateCustomToolDto {
   description: string;
   executor_type: "http_api";
   executor_config: {
-    method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
-    endpoint: string;
+    base_url: string;
   };
   auth_config?: {
     type: "api_key";
@@ -317,9 +474,13 @@ export const workspaceToolsApi = {
   /**
    * List all available plugins (builtin + custom) for browsing and adding
    */
-  list: async (workspaceId: string): Promise<Plugin[]> => {
+  list: async (
+    workspaceId: string,
+    params?: ListPluginsParams
+  ): Promise<Plugin[]> => {
     const response = await client.get<Plugin[]>(
-      workspaceToolsEndpoints.list(workspaceId)
+      workspaceToolsEndpoints.list(workspaceId),
+      { params }
     );
     return response.data;
   },
@@ -327,9 +488,13 @@ export const workspaceToolsApi = {
   /**
    * List installed plugins in workspace (with auth info)
    */
-  installed: async (workspaceId: string): Promise<Plugin[]> => {
+  installed: async (
+    workspaceId: string,
+    params?: Omit<ListPluginsParams, "installed">
+  ): Promise<Plugin[]> => {
     const response = await client.get<Plugin[]>(
-      workspaceToolsEndpoints.installed(workspaceId)
+      workspaceToolsEndpoints.installed(workspaceId),
+      { params }
     );
     return response.data;
   },
@@ -388,10 +553,20 @@ export const workspaceToolsApi = {
   },
 
   /**
-   * Remove plugin from workspace
+   * Remove plugin from workspace (uninstall, keeps the tool entity)
    */
   remove: async (workspaceId: string, toolId: string): Promise<void> => {
     await client.delete(workspaceToolsEndpoints.remove(workspaceId, toolId));
+  },
+
+  /**
+   * Delete a custom tool permanently
+   * Only the creator can delete, and only if:
+   * - Tool is category=custom & is_public=false
+   * - Tool is not installed in any other workspace
+   */
+  deleteCustom: async (workspaceId: string, toolId: string): Promise<void> => {
+    await client.delete(workspaceToolsEndpoints.deleteCustom(workspaceId, toolId));
   },
 
   // OAuth methods

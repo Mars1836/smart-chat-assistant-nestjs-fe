@@ -44,8 +44,7 @@ export function CreateToolDialog({
     description: "",
     executor_type: "http_api",
     executor_config: {
-      method: "GET",
-      endpoint: "",
+      base_url: "",
     },
     auth_config: {
       type: "api_key",
@@ -61,7 +60,7 @@ export function CreateToolDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.display_name || !formData.executor_config.endpoint) {
+    if (!formData.name || !formData.display_name || !formData.executor_config.base_url) {
       toast.error("Vui lòng điền đầy đủ thông tin bắt buộc");
       return;
     }
@@ -94,8 +93,7 @@ export function CreateToolDialog({
         description: "",
         executor_type: "http_api",
         executor_config: {
-          method: "GET",
-          endpoint: "",
+          base_url: "",
         },
         auth_config: {
           type: "api_key",
@@ -175,41 +173,22 @@ export function CreateToolDialog({
             </div>
 
             <div className="space-y-2">
-              <Label>Cấu hình API Endpoint</Label>
-              <div className="flex gap-2">
-                <Select
-                  value={formData.executor_config.method}
-                  onValueChange={(value) =>
-                    setFormData({
-                      ...formData,
-                      executor_config: { ...formData.executor_config, method: value as any },
-                    })
-                  }
-                >
-                  <SelectTrigger className="w-[100px]">
-                    <SelectValue placeholder="Method" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="GET">GET</SelectItem>
-                    <SelectItem value="POST">POST</SelectItem>
-                    <SelectItem value="PUT">PUT</SelectItem>
-                    <SelectItem value="DELETE">DELETE</SelectItem>
-                    <SelectItem value="PATCH">PATCH</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Input
-                  placeholder="https://api.example.com/v1/resource"
-                  value={formData.executor_config.endpoint}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      executor_config: { ...formData.executor_config, endpoint: e.target.value },
-                    })
-                  }
-                  required
-                  className="flex-1 font-mono text-sm"
-                />
-              </div>
+              <Label>Cấu hình Base URL</Label>
+              <Input
+                placeholder="https://api.example.com"
+                value={formData.executor_config.base_url}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    executor_config: { ...formData.executor_config, base_url: e.target.value },
+                  })
+                }
+                required
+                className="font-mono text-sm"
+              />
+              <p className="text-[10px] text-muted-foreground">
+                URL gốc của API. Các action sẽ nối thêm path vào URL này.
+              </p>
             </div>
 
             <div className="space-y-4 border rounded-lg p-4 bg-muted/30">

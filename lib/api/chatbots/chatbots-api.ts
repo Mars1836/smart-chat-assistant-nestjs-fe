@@ -80,12 +80,21 @@ export interface ChatFile {
   size: number;
 }
 
+export interface UploadedImage {
+  id: string;
+  url: string;
+  filename: string;
+  mime_type: string;
+  size: number;
+}
+
 export interface ChatResponseDto {
   conversation_id?: string;
   response: string;
   model: string;
   processingTime: number;
   files?: ChatFile[];
+  uploaded_images?: UploadedImage[];
 }
 
 export interface ListChatbotsParams {

@@ -41,6 +41,7 @@ export {
   type ChatDto,
   type ChatResponseDto,
   type ChatFile,
+  type UploadedImage,
   type ListChatbotsParams,
   type WidgetConfig,
 } from "./chatbots/chatbots-api";
@@ -97,6 +98,7 @@ export { workspaceInvitationsEndpoints } from "./workspace-invitations/endpoints
 // Tools API
 export {
   toolsApi,
+  toolActionsApi,
   workspaceToolsApi,
   chatbotToolsApi,
   type Plugin,
@@ -109,8 +111,14 @@ export {
   type ChatbotTool,
   type ToolCategory,
   type ToolExecutorType,
+  type CreateToolDto,
+  type UpdateToolDto,
+  type CreateToolActionDto,
+  type UpdateToolActionDto,
+  type ToolAction,
   type AddWorkspaceToolDto,
   type UpdateWorkspaceToolDto,
+  type ListPluginsParams,
   type UpdateChatbotToolDto,
   type UpdateActionDto,
   type BatchActionsDto,
@@ -124,6 +132,7 @@ export {
 } from "./tools/tools-api";
 export {
   toolsEndpoints,
+  toolActionsEndpoints,
   workspaceToolsEndpoints,
   chatbotToolsEndpoints,
 } from "./tools/endpoints";

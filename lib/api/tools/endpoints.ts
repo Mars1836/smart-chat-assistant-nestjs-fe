@@ -9,6 +9,26 @@ const TOOLS_BASE = "/tools";
 export const toolsEndpoints = {
   list: () => TOOLS_BASE,
   get: (id: string) => `${TOOLS_BASE}/${id}`,
+  create: () => TOOLS_BASE,
+  update: (id: string) => `${TOOLS_BASE}/${id}`,
+};
+
+// Tool actions endpoints
+export const toolActionsEndpoints = {
+  // List actions for a tool
+  list: (toolId: string) => `${TOOLS_BASE}/${toolId}/actions`,
+  
+  // Create new action for a tool
+  create: (toolId: string) => `${TOOLS_BASE}/${toolId}/actions`,
+  
+  // Get single action
+  get: (toolId: string, actionId: string) => `${TOOLS_BASE}/${toolId}/actions/${actionId}`,
+  
+  // Update action
+  update: (toolId: string, actionId: string) => `${TOOLS_BASE}/${toolId}/actions/${actionId}`,
+  
+  // Delete action
+  delete: (toolId: string, actionId: string) => `${TOOLS_BASE}/${toolId}/actions/${actionId}`,
 };
 
 // Workspace tools
@@ -27,6 +47,10 @@ export const workspaceToolsEndpoints = {
 
   // Create custom tool in workspace
   custom: (workspaceId: string) => `${WORKSPACE_TOOLS_BASE(workspaceId)}/custom`,
+
+  // Delete custom tool permanently
+  deleteCustom: (workspaceId: string, toolId: string) =>
+    `${WORKSPACE_TOOLS_BASE(workspaceId)}/custom/${toolId}`,
 
   // Get single plugin details
   get: (workspaceId: string, toolId: string) =>

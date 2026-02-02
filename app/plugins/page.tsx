@@ -15,7 +15,17 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Loader2,
@@ -37,6 +47,9 @@ import {
   AlertCircle,
   XCircle,
   Check,
+  Edit2,
+  Filter,
+  ArrowUpDown,
 } from "lucide-react";
 import { useWorkspace } from "@/lib/stores/workspace-store";
 import {
@@ -46,7 +59,8 @@ import {
 import { OAuthConnectDialog } from "@/components/oauth-connect-dialog";
 import { ApiKeyConfigDialog } from "@/components/api-key-config-dialog";
 import { PluginActionsDialog } from "@/components/plugin-actions-dialog";
-import { CreateToolDialog } from "@/components/create-tool-dialog"; // Added
+import { CreateToolDialog } from "@/components/create-tool-dialog";
+import { ToolActionsManager } from "@/components/tool-actions-manager";
 
 // Icon mapping for tool types
 const getToolIcon = (name: string, executorType?: string) => {
@@ -97,10 +111,19 @@ function PluginsContent() {
   const [allPlugins, setAllPlugins] = useState<Plugin[]>([]);
   const [workspacePlugins, setWorkspacePlugins] = useState<Plugin[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Filter States
+  const [activeTab, setActiveTab] = useState("workspace");
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [filterCategory, setFilterCategory] = useState<"all" | "builtin" | "custom" | "community">("all");
+  const [sortBy, setSortBy] = useState<"name" | "category" | "created_at">("name");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [updatingPlugin, setUpdatingPlugin] = useState<string | null>(null);
   const [addingPlugin, setAddingPlugin] = useState<string | null>(null);
+  const [deletingCustom, setDeletingCustom] = useState<string | null>(null);
   
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -110,6 +133,7 @@ function PluginsContent() {
   const [apiKeyDialogOpen, setApiKeyDialogOpen] = useState(false);
   const [actionsDialogOpen, setActionsDialogOpen] = useState(false);
   const [createToolDialogOpen, setCreateToolDialogOpen] = useState(false);
+  const [manageActionsDialogOpen, setManageActionsDialogOpen] = useState(false);
 
   const [selectedPlugin, setSelectedPlugin] = useState<Plugin | null>(null);
 
@@ -134,21 +158,43 @@ function PluginsContent() {
     }
   }, [searchParams, selectedWorkspace]);
 
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Load plugins when filters change
   useEffect(() => {
     if (selectedWorkspace) {
       loadPlugins();
     }
-  }, [selectedWorkspace]);
+  }, [selectedWorkspace, debouncedSearch, filterCategory, sortBy, sortOrder]);
 
   const loadPlugins = async (background = false) => {
     if (!selectedWorkspace) return;
 
     try {
       if (!background) setLoading(true);
+
+      const params: any = {
+        search: debouncedSearch || undefined,
+        sortBy,
+        sortOrder,
+      };
+
+      if (filterCategory !== "all") {
+        params.category = filterCategory;
+      }
+
       // Load both all available plugins and installed workspace plugins
+      // Ideally we should load only active tab content, but currently UI structure requires both lists?
+      // Actually TabsContent mounts lazily, but let's keep loading both for valid counts in TabsTrigger badges
       const [globalData, workspaceData] = await Promise.all([
-        workspaceToolsApi.list(selectedWorkspace.id),
-        workspaceToolsApi.installed(selectedWorkspace.id),
+        workspaceToolsApi.list(selectedWorkspace.id, params),
+        workspaceToolsApi.installed(selectedWorkspace.id, params),
       ]);
       setAllPlugins(globalData);
       setWorkspacePlugins(workspaceData);
@@ -249,6 +295,37 @@ function PluginsContent() {
     }
   };
 
+  const handleDeleteCustomTool = async (plugin: Plugin) => {
+    if (!selectedWorkspace) return;
+
+    // Confirm before permanently deleting
+    const confirmed = window.confirm(
+      `Bạn có chắc muốn xoá vĩnh viễn plugin "${plugin.display_name}"?\n\nHành động này không thể hoàn tác.`
+    );
+    if (!confirmed) return;
+
+    try {
+      setDeletingCustom(plugin.id);
+      await workspaceToolsApi.deleteCustom(selectedWorkspace.id, plugin.id);
+      toast.success(`Đã xoá vĩnh viễn plugin ${plugin.display_name}`);
+      loadPlugins(true);
+    } catch (err: any) {
+      console.error("Error deleting custom plugin:", err);
+      const status = err?.response?.status;
+      let message = err?.response?.data?.message || "Unknown error";
+      
+      if (status === 403) {
+        message = "Bạn không có quyền xoá plugin này";
+      } else if (status === 400) {
+        message = "Plugin đang được sử dụng ở workspace khác";
+      }
+      
+      toast.error("Không thể xoá plugin", { description: message });
+    } finally {
+      setDeletingCustom(null);
+    }
+  };
+
   const handleOAuthConnected = () => {
     loadPlugins(true);
     setOAuthDialogOpen(false);
@@ -266,18 +343,10 @@ function PluginsContent() {
   // Get workspace plugin IDs for checking if a global plugin is already added
   const workspacePluginIds = new Set(workspacePlugins.map(p => p.id));
 
-  // Filter for search
-  const filteredAllPlugins = allPlugins.filter(
-    (p) =>
-      p.display_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const filteredWorkspacePlugins = workspacePlugins.filter(
-    (p) =>
-      p.display_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Client-side filtering is removed in favor of Server-side filtering
+  // Just use the lists directly
+  const filteredAllPlugins = allPlugins;
+  const filteredWorkspacePlugins = workspacePlugins;
 
   const isApiKeyConfigured = (plugin: Plugin) => {
     // Check if there's a default/system-provided key or it's marked as set by backend
@@ -324,26 +393,71 @@ function PluginsContent() {
           </Button>
         </div>
 
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            name="search_p_q"
-            autoComplete="new-password"
-            autoCorrect="off"
-            spellCheck={false}
-            readOnly={!isSearchFocused}
-            onFocus={() => setIsSearchFocused(true)}
-            onBlur={() => setIsSearchFocused(false)}
-            placeholder="Tìm kiếm plugin..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 h-10"
-          />
+        {/* Filters & Search */}
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              name="search_p_q"
+              autoComplete="new-password"
+              autoCorrect="off"
+              spellCheck={false}
+              readOnly={!isSearchFocused}
+              onFocus={() => setIsSearchFocused(true)}
+              onBlur={() => setIsSearchFocused(false)}
+              placeholder="Tìm kiếm plugin..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 h-10"
+            />
+          </div>
+          
+          <div className="flex gap-2">
+            <Select 
+              value={filterCategory} 
+              onValueChange={(v: any) => setFilterCategory(v)}
+            >
+              <SelectTrigger className="w-[140px]">
+                 <Filter className="w-3 h-3 mr-2" />
+                 <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="builtin">Built-in</SelectItem>
+                <SelectItem value="custom">Custom</SelectItem>
+                <SelectItem value="community">Community</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="w-[140px] justify-between">
+                  <span className="flex items-center gap-2">
+                    <ArrowUpDown className="w-3 h-3" />
+                    Sort
+                  </span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Sort By</DropdownMenuLabel>
+                <DropdownMenuRadioGroup value={sortBy} onValueChange={(v:any) => setSortBy(v)}>
+                  <DropdownMenuRadioItem value="name">Name</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="category">Category</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="created_at">Created Date</DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>Order</DropdownMenuLabel>
+                <DropdownMenuRadioGroup value={sortOrder} onValueChange={(v:any) => setSortOrder(v)}>
+                  <DropdownMenuRadioItem value="asc">Ascending</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="desc">Descending</DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="workspace" className="w-full">
+        <Tabs defaultValue="workspace" value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full max-w-md grid-cols-2">
             <TabsTrigger value="workspace" className="gap-2">
               <Plug className="w-4 h-4" />
@@ -583,8 +697,12 @@ function PluginsContent() {
                             />
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <MoreVertical className="w-4 h-4" />
+                                <Button variant="ghost" size="icon" disabled={deletingCustom === plugin.id}>
+                                  {deletingCustom === plugin.id ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <MoreVertical className="w-4 h-4" />
+                                  )}
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
@@ -592,6 +710,16 @@ function PluginsContent() {
                                   <Zap className="w-4 h-4 mr-2" />
                                   View Actions
                                 </DropdownMenuItem>
+                                {/* Show Manage Actions option only for custom plugins */}
+                                {plugin.category === "custom" && (
+                                  <DropdownMenuItem onClick={() => {
+                                    setSelectedPlugin(plugin);
+                                    setManageActionsDialogOpen(true);
+                                  }}>
+                                    <Edit2 className="w-4 h-4 mr-2" />
+                                    Manage Actions
+                                  </DropdownMenuItem>
+                                )}
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem 
                                   onClick={() => handleRemoveFromWorkspace(plugin)}
@@ -600,6 +728,16 @@ function PluginsContent() {
                                   <Trash2 className="w-4 h-4 mr-2" />
                                   Remove from Workspace
                                 </DropdownMenuItem>
+                                {/* Show Delete Permanently option only for custom private plugins */}
+                                {plugin.category === "custom" && !(plugin as any).is_public && (
+                                  <DropdownMenuItem 
+                                    onClick={() => handleDeleteCustomTool(plugin)}
+                                    className="text-destructive focus:text-destructive focus:bg-destructive/10 font-medium"
+                                  >
+                                    <Trash2 className="w-4 h-4 mr-2" />
+                                    Delete Permanently
+                                  </DropdownMenuItem>
+                                )}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
@@ -648,6 +786,16 @@ function PluginsContent() {
             onOpenChange={setCreateToolDialogOpen}
             workspaceId={selectedWorkspace.id}
             onToolCreated={handleToolCreated}
+          />
+        )}
+
+        {/* Manage Actions Dialog */}
+        {selectedWorkspace && selectedPlugin && (
+          <ToolActionsManager
+            open={manageActionsDialogOpen}
+            onOpenChange={setManageActionsDialogOpen}
+            tool={selectedPlugin}
+            onActionsChanged={() => loadPlugins(true)}
           />
         )}
       </div>

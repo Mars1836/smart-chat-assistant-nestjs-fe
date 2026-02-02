@@ -10,8 +10,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Send, Loader2, Bot, ChevronDown, Check } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Plus, Send, Loader2, Bot, ChevronDown, Check, ImagePlus, X } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import {
   chatbotsApi,
   workspacesApi,
@@ -23,10 +23,12 @@ import {
   type ConversationResponseDto,
   type MessageResponseDto,
   type ChatFile,
+  type UploadedImage,
 } from "@/lib/api";
 import { API_BASE_URL } from "@/lib/constants";
 import { FileIcon, Download } from "lucide-react";
 import { toast } from "sonner";
+import { ImageViewer } from "@/components/image-viewer";
 
 interface Message {
   id: string;
@@ -34,6 +36,7 @@ interface Message {
   content: string;
   timestamp: Date;
   files?: ChatFile[];
+  userImages?: UploadedImage[];
 }
 
 export default function ChatPage() {
@@ -59,11 +62,80 @@ export default function ChatPage() {
   const [loadingChatbot, setLoadingChatbot] = useState(false);
   const [loadingConversations, setLoadingConversations] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [viewingImage, setViewingImage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const MAX_IMAGES = 5;
+  const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 
   const getFileUrl = (url: string) => {
     if (url.startsWith("http")) return url;
     return `${API_BASE_URL}${url}`;
   };
+
+  // Add images with validation
+  const addImages = (files: File[]) => {
+    const validFiles = files.filter((f) => {
+      if (!f.type.startsWith("image/")) {
+        toast.error(`${f.name} không phải là ảnh`);
+        return false;
+      }
+      if (f.size > MAX_SIZE) {
+        toast.error(`Ảnh ${f.name} vượt quá 10MB`);
+        return false;
+      }
+      return true;
+    });
+
+    const total = selectedImages.length + validFiles.length;
+    if (total > MAX_IMAGES) {
+      toast.error(`Tối đa ${MAX_IMAGES} ảnh`);
+      return;
+    }
+
+    setSelectedImages((prev) => [...prev, ...validFiles]);
+    const newPreviews = validFiles.map((file) => URL.createObjectURL(file));
+    setImagePreviews((prev) => [...prev, ...newPreviews]);
+  };
+
+  // Handle paste from clipboard
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    const imageFiles: File[] = [];
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith("image/")) {
+        const file = items[i].getAsFile();
+        if (file) imageFiles.push(file);
+      }
+    }
+
+    if (imageFiles.length > 0) {
+      e.preventDefault();
+      addImages(imageFiles);
+    }
+  };
+
+  // Remove image from selection
+  const removeImage = (index: number) => {
+    URL.revokeObjectURL(imagePreviews[index]); // Cleanup memory
+    setSelectedImages((prev) => prev.filter((_, i) => i !== index));
+    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Handle file input change
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    addImages(files);
+    e.target.value = "";
+  };
+
+  // Note: We don't revoke blob URLs automatically because they are used in message history
+  // They will be cleaned up when the page is navigated away
 
   // Load workspaces on mount
   useEffect(() => {
@@ -250,12 +322,16 @@ export default function ChatPage() {
 
   const handleSendMessage = async () => {
     if (
-      !inputValue.trim() ||
+      (!inputValue.trim() && selectedImages.length === 0) ||
       !selectedWorkspaceId ||
       !currentChatbot ||
       sending
     )
       return;
+
+    // Store current images for the message
+    const currentImages = [...selectedImages];
+    const currentPreviews = [...imagePreviews];
 
     // Create conversation if not exists
     let conversationId = selectedConversationId;
@@ -268,7 +344,6 @@ export default function ChatPage() {
         conversationId = newConversation.id;
         setSelectedConversationId(newConversation.id);
         setCurrentConversation(newConversation);
-        // Reload conversations
         await loadConversations(selectedWorkspaceId);
       } catch (err: any) {
         toast.error("Lỗi tạo cuộc hội thoại", {
@@ -284,20 +359,40 @@ export default function ChatPage() {
       role: "user",
       content: inputValue,
       timestamp: new Date(),
+      userImages: currentPreviews.map((preview, index) => ({
+        id: `temp-${index}`,
+        url: preview,
+        filename: currentImages[index]?.name || `image-${index}`,
+        mime_type: currentImages[index]?.type || "image/jpeg",
+        size: currentImages[index]?.size || 0,
+      })),
     };
     setMessages((prev) => [...prev, userMessage]);
     const messageText = inputValue;
     setInputValue("");
+    setSelectedImages([]);
+    setImagePreviews([]);
     setSending(true);
 
     try {
-      // Use chatsApi with conversation context
-      const response = await chatsApi.sendMessageWithConversation(
-        selectedWorkspaceId,
-        currentChatbot.id,
-        conversationId,
-        messageText
-      );
+      // Send message with or without images
+      let response;
+      if (currentImages.length > 0) {
+        response = await chatsApi.sendMessageWithImages(
+          selectedWorkspaceId,
+          currentChatbot.id,
+          conversationId,
+          messageText,
+          currentImages
+        );
+      } else {
+        response = await chatsApi.sendMessageWithConversation(
+          selectedWorkspaceId,
+          currentChatbot.id,
+          conversationId,
+          messageText
+        );
+      }
 
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -321,6 +416,35 @@ export default function ChatPage() {
     } finally {
       setSending(false);
     }
+  };
+
+  // Helper to render images grid
+  const renderImages = (images: { url: string; name?: string }[]) => {
+    if (!images.length) return null;
+    
+    return (
+      <div className={`grid gap-1.5 mb-2 ${
+        images.length === 1 ? 'grid-cols-1' : 
+        images.length === 2 ? 'grid-cols-2' : 
+        'grid-cols-2' // 3+ images
+      }`}>
+        {images.map((img, index) => (
+          <div 
+            key={index} 
+            className={`relative overflow-hidden rounded-md cursor-zoom-in group/image bg-background/50 border ${
+              images.length % 2 !== 0 && index === 0 && images.length > 1 ? 'col-span-2' : ''
+            }`}
+            onClick={() => setViewingImage(img.url)}
+          >
+            <img
+              src={img.url}
+              alt={img.name || "Attached image"}
+              className="w-full h-auto object-cover max-h-[300px] hover:opacity-95 transition-opacity duration-200"
+            />
+          </div>
+        ))}
+      </div>
+    );
   };
 
   if (loading) {
@@ -481,72 +605,115 @@ export default function ChatPage() {
 
           {/* Messages */}
           <div className="flex-1 overflow-auto p-6 space-y-4">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${
-                  message.role === "user" ? "justify-end" : "justify-start"
-                }`}
-              >
-                <Card
-                  className={`max-w-md px-4 py-3 group ${
-                    message.role === "user"
-                      ? "bg-primary text-primary-foreground border-0"
-                      : "bg-muted text-foreground"
+            {messages.map((message) => {
+              // Collect all images for this message
+              const displayImages: { url: string; name?: string }[] = [];
+              
+              // 1. User uploaded images (optimistic)
+              if (message.userImages) {
+                message.userImages.forEach(img => displayImages.push({ url: img.url, name: img.filename }));
+              }
+              
+              // 2. Server files that are images
+              if (message.files) {
+                message.files.forEach(file => {
+                  if (file.type === "image") {
+                    displayImages.push({ url: getFileUrl(file.url), name: file.filename });
+                  }
+                });
+              }
+
+              // Filter out files that are NOT images for the separate list
+              const otherFiles = message.files?.filter(f => f.type !== "image") || [];
+
+              return (
+                <div
+                  key={message.id}
+                  className={`flex ${
+                    message.role === "user" ? "justify-end" : "justify-start"
                   }`}
                 >
-                  <p className="text-sm decoration-slice whitespace-pre-wrap">{message.content}</p>
-                  
-                  {message.files && message.files.length > 0 && (
-                    <div className="mt-3 space-y-2">
-                      {message.files.map((file, index) => {
-                        if (file.type === "image") {
-                          return (
-                            <div key={index} className="rounded-lg overflow-hidden border bg-background/50">
-                              <img 
-                                src={getFileUrl(file.url)} 
-                                alt={file.filename}
-                                className="w-full h-auto max-h-[300px] object-contain"
-                              />
-                            </div>
-                          );
-                        }
-                        return (
-                          <div key={index} className="flex items-center gap-3 p-3 rounded-lg border bg-background/50 hover:bg-background transition-colors">
-                            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                              <FileIcon className="w-5 h-5 text-primary" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium truncate text-sm">{file.filename}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {file.size ? `${(file.size / 1024).toFixed(1)} KB` : "Unknown size"}
-                              </p>
-                            </div>
-                            <a 
-                              href={getFileUrl(file.url)} 
-                              download={file.filename}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-muted transition-colors"
-                            >
-                              <Download className="w-4 h-4 text-muted-foreground" />
-                            </a>
+                  <div className={`flex flex-col max-w-md ${message.role === "user" ? "items-end" : "items-start"}`}>
+                    {/* Render Images OUTSIDE the card (no blue background) */}
+                    {displayImages.length > 0 && (
+                      <div className={`grid gap-1.5 mb-1 w-full ${
+                        displayImages.length === 1 ? 'grid-cols-1' : 
+                        displayImages.length === 2 ? 'grid-cols-2' : 
+                        'grid-cols-2'
+                      }`}>
+                        {displayImages.map((img, index) => (
+                          <div 
+                            key={index} 
+                            className={`relative overflow-hidden rounded-lg cursor-zoom-in border border-border bg-muted ${
+                              displayImages.length % 2 !== 0 && index === 0 && displayImages.length > 1 ? 'col-span-2' : ''
+                            }`}
+                            onClick={() => setViewingImage(img.url)}
+                          >
+                            <img
+                              src={img.url}
+                              alt={img.name || "Attached image"}
+                              className="w-full h-auto object-cover max-h-[300px] hover:opacity-90 transition-opacity duration-200"
+                            />
                           </div>
-                        );
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Text content in Card */}
+                    {(message.content || otherFiles.length > 0) && (
+                      <Card
+                        className={`px-4 py-3 group ${
+                          message.role === "user"
+                            ? "bg-primary text-primary-foreground border-0"
+                            : "bg-muted text-foreground"
+                        }`}
+                      >
+                        {/* Text Content */}
+                        {message.content && (
+                           <p className="text-sm decoration-slice whitespace-pre-wrap">{message.content}</p>
+                        )}
+                        
+                        {/* Other Files */}
+                        {otherFiles.length > 0 && (
+                          <div className="mt-3 space-y-2">
+                            {otherFiles.map((file, index) => (
+                              <div key={index} className="flex items-center gap-3 p-3 rounded-lg border bg-background/50 hover:bg-background transition-colors">
+                                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                                  <FileIcon className="w-5 h-5 text-primary" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium truncate text-sm text-foreground">{file.filename}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {file.size ? `${(file.size / 1024).toFixed(1)} KB` : "Unknown size"}
+                                  </p>
+                                </div>
+                                <a 
+                                  href={getFileUrl(file.url)} 
+                                  download={file.filename}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-muted transition-colors"
+                                >
+                                  <Download className="w-4 h-4 text-muted-foreground" />
+                                </a>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </Card>
+                    )}
+                    <p className={`text-[10px] mt-1 px-1 ${
+                      message.role === "user" ? "text-muted-foreground text-right" : "text-muted-foreground"
+                    }`}>
+                      {message.timestamp.toLocaleTimeString("vi-VN", {
+                        hour: "2-digit",
+                        minute: "2-digit",
                       })}
-                    </div>
-                  )}
-                  <p className={`text-[10px] mt-1 text-right opacity-0 group-hover:opacity-100 transition-opacity ${
-                    message.role === "user" ? "text-primary-foreground/70" : "text-muted-foreground"
-                  }`}>
-                    {message.timestamp.toLocaleTimeString("vi-VN", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
-                </Card>
-              </div>
-            ))}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           {/* Input Area */}
@@ -556,11 +723,54 @@ export default function ChatPage() {
                 ⚠️ Chatbot này đang bị tắt. Vui lòng bật chatbot để sử dụng.
               </div>
             )}
+            {/* Image Previews */}
+            {imagePreviews.length > 0 && (
+              <div className="flex gap-2 mb-3 flex-wrap">
+                {imagePreviews.map((preview, index) => (
+                  <div
+                    key={index}
+                    className="relative w-16 h-16 rounded-lg overflow-hidden border bg-muted"
+                  >
+                    <img
+                      src={preview}
+                      alt={`Preview ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                    <button
+                      onClick={() => removeImage(index)}
+                      className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center shadow-sm hover:bg-destructive/90"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="flex gap-2">
+              {/* Hidden file input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              {/* Attach button */}
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={sending || !currentChatbot?.enabled || selectedImages.length >= MAX_IMAGES}
+                title="Đính kèm ảnh (hoặc paste Ctrl+V)"
+              >
+                <ImagePlus className="w-4 h-4" />
+              </Button>
               <Input
+                ref={inputRef}
                 placeholder={
                   currentChatbot?.enabled
-                    ? "Type your message..."
+                    ? "Nhập tin nhắn..."
                     : "Chatbot đang tắt..."
                 }
                 value={inputValue}
@@ -568,6 +778,7 @@ export default function ChatPage() {
                 onKeyPress={(e) =>
                   e.key === "Enter" && !sending && handleSendMessage()
                 }
+                onPaste={handlePaste}
                 className="flex-1 h-10"
                 disabled={sending || !currentChatbot?.enabled}
               />
@@ -575,7 +786,7 @@ export default function ChatPage() {
                 onClick={handleSendMessage}
                 className="bg-primary hover:bg-primary/90 gap-2"
                 disabled={
-                  sending || !inputValue.trim() || !currentChatbot?.enabled
+                  sending || (!inputValue.trim() && selectedImages.length === 0) || !currentChatbot?.enabled
                 }
               >
                 {sending ? (
@@ -591,6 +802,11 @@ export default function ChatPage() {
           </div>
         </div>
       </div>
+      <ImageViewer 
+        isOpen={!!viewingImage} 
+        onClose={() => setViewingImage(null)} 
+        imageUrl={viewingImage || ""} 
+      />
     </AppLayout>
   );
 }

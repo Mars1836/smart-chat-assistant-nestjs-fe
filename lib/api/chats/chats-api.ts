@@ -47,4 +47,39 @@ export const chatsApi = {
     );
     return response.data;
   },
+
+  /**
+   * Send a chat message with images
+   * Uses FormData for multipart/form-data upload
+   * @param images - Array of image files (max 5, each max 10MB)
+   */
+  sendMessageWithImages: async (
+    workspaceId: string,
+    chatbotId: string,
+    conversationId: string,
+    message: string,
+    images: File[]
+  ): Promise<ChatResponseDto> => {
+    const formData = new FormData();
+    formData.append("message", message);
+    formData.append("conversation_id", conversationId);
+
+    // Append each image
+    images.forEach((image) => {
+      formData.append("images", image);
+    });
+
+    const response = await client.post<ChatResponseDto>(
+      chatsEndpoints.sendMessage(workspaceId, chatbotId),
+      formData,
+      {
+        timeout: 300000, // 5 minutes
+        headers: {
+          // Don't set Content-Type, browser will add boundary automatically
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+    return response.data;
+  },
 };

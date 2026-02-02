@@ -75,6 +75,14 @@ export interface UpdateWorkspaceToolDto {
   config_override?: Record<string, unknown>;
 }
 
+export interface ListPluginsParams {
+  category?: "builtin" | "custom" | "community";
+  installed?: boolean;
+  search?: string;
+  sortBy?: "name" | "category" | "created_at";
+  sortOrder?: "asc" | "desc";
+}
+
 // =============================================================================
 // API Functions
 // =============================================================================
@@ -84,9 +92,13 @@ export const workspaceToolsApi = {
    * Get all available plugins (builtin + custom) for browsing and adding
    * Returns all tools in the system
    */
-  list: async (workspaceId: string): Promise<WorkspaceTool[]> => {
+  list: async (
+    workspaceId: string,
+    params?: ListPluginsParams
+  ): Promise<WorkspaceTool[]> => {
     const response = await client.get<WorkspaceTool[]>(
-      workspaceToolsEndpoints.list(workspaceId)
+      workspaceToolsEndpoints.list(workspaceId),
+      { params }
     );
     return response.data;
   },
@@ -94,9 +106,13 @@ export const workspaceToolsApi = {
   /**
    * Get installed plugins in workspace with auth info
    */
-  installed: async (workspaceId: string): Promise<WorkspaceTool[]> => {
+  installed: async (
+    workspaceId: string,
+    params?: Omit<ListPluginsParams, "installed">
+  ): Promise<WorkspaceTool[]> => {
     const response = await client.get<WorkspaceTool[]>(
-      workspaceToolsEndpoints.installed(workspaceId)
+      workspaceToolsEndpoints.installed(workspaceId),
+      { params }
     );
     return response.data;
   },
@@ -131,10 +147,20 @@ export const workspaceToolsApi = {
   },
 
   /**
-   * Remove a tool from the workspace
+   * Remove a tool from the workspace (uninstall, keeps the tool entity)
    */
   remove: async (workspaceId: string, toolId: string): Promise<void> => {
     await client.delete(workspaceToolsEndpoints.remove(workspaceId, toolId));
+  },
+
+  /**
+   * Delete a custom tool permanently
+   * Only the creator can delete, and only if:
+   * - Tool is category=custom & is_public=false
+   * - Tool is not installed in any other workspace
+   */
+  deleteCustom: async (workspaceId: string, toolId: string): Promise<void> => {
+    await client.delete(workspaceToolsEndpoints.deleteCustom(workspaceId, toolId));
   },
 
   /**
