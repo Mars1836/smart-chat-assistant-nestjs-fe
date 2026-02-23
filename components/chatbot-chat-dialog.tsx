@@ -14,8 +14,8 @@ import { Loader2, Send, Bot, User, FileIcon, Download, ImagePlus, X } from "luci
 import {
   chatsApi,
   conversationsApi,
-  messagesApi,
   type ChatFile,
+  type ChatCard,
   type UploadedImage,
 } from "@/lib/api";
 import { API_BASE_URL } from "@/lib/constants";
@@ -36,6 +36,7 @@ interface Message {
   isError?: boolean;
   files?: ChatFile[];
   userImages?: UploadedImage[];
+  cards?: ChatCard[];
 }
 
 export function ChatbotChatDialog({
@@ -143,42 +144,9 @@ export function ChatbotChatDialog({
   }, [open, chatbotId]);
 
   const loadHistory = async () => {
-    try {
-      // 1. Find existing conversation
-      const convs = await conversationsApi.listByChatbot(chatbotId, {
-        limit: 1,
-        sortBy: "created_at",
-        sortOrder: "DESC",
-      });
-
-      if (convs.data.length > 0) {
-        const lastConv = convs.data[0];
-        setConversationId(lastConv.id);
-
-        // 2. Load messages
-        const history = await messagesApi.listByConversation(lastConv.id, {
-          limit: 100,
-          sortBy: "created_at",
-          sortOrder: "ASC",
-        });
-
-        const mappedMessages: Message[] = history.data.map((msg) => ({
-          id: msg.id,
-          role: msg.sender_type === "bot" ? "assistant" : "user",
-          content: msg.content,
-          timestamp: new Date(msg.created_at),
-          files: msg.attachments, // Map attachments to files
-        }));
-
-        setMessages(mappedMessages);
-      } else {
-        setMessages([]);
-        setConversationId(null);
-      }
-    } catch (err) {
-      console.error("Error loading history:", err);
-      toast.error("Failed to load chat history");
-    }
+    // Chat thử: luôn bắt đầu cuộc hội thoại mới, không load conversation cũ
+    setMessages([]);
+    setConversationId(null);
   };
 
   const handleSendMessage = async () => {
@@ -247,6 +215,7 @@ export function ChatbotChatDialog({
         content: response.response,
         timestamp: new Date(),
         files: response.files,
+        cards: response.cards && response.cards.length > 0 ? response.cards : undefined,
       };
 
       setMessages((prev) => [...prev, aiMessage]);
@@ -369,6 +338,54 @@ export function ChatbotChatDialog({
                           </div>
                         );
                       })}
+                    </div>
+                  )}
+                  {message.cards && message.cards.length > 0 && (
+                    <div className="mt-3 grid grid-cols-1 gap-2">
+                      {message.cards.map((card, index) => (
+                        <a
+                          key={index}
+                          href={card.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={`flex gap-3 rounded-lg border bg-background/80 hover:bg-background hover:border-primary/30 transition-colors overflow-hidden text-left ${
+                            card.type === "product" ? "border-amber-200/50" : card.type === "article" ? "border-blue-200/50" : ""
+                          }`}
+                        >
+                          {card.imageUrl && (
+                            <div className="w-20 h-20 shrink-0 bg-muted">
+                              <img
+                                src={card.imageUrl}
+                                alt={card.title || card.name || ""}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0 py-2 pr-2">
+                            <p className="font-medium text-sm line-clamp-1">{card.title || card.name || ""}</p>
+                            {(card.description || (card.type === "product" && (card.metadata?.brand ?? card.brand))) && (
+                              <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
+                                {card.description || (card.type === "product" ? (card.metadata?.brand ?? card.brand) : "")}
+                              </p>
+                            )}
+                            {card.type === "product" && (card.metadata?.price != null || card.price != null) && (
+                              <p className="text-xs font-medium text-amber-700 dark:text-amber-400 mt-1">
+                                {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format((card.metadata?.price ?? card.price)!)}
+                              </p>
+                            )}
+                            {card.type === "article" && (card.metadata?.author || card.metadata?.publishedAt) && (
+                              <p className="text-[10px] text-muted-foreground mt-1">
+                                {[card.metadata.author, card.metadata.publishedAt].filter(Boolean).join(" · ")}
+                              </p>
+                            )}
+                            <p className="text-[10px] text-muted-foreground mt-1 truncate" title={card.url}>
+                              {card.metadata?.displayLink ?? (() => {
+                                try { const u = new URL(card.url); return u.hostname + (u.pathname !== "/" ? u.pathname : ""); } catch { return card.url; }
+                              })()}
+                            </p>
+                          </div>
+                        </a>
+                      ))}
                     </div>
                   )}
                   <p className="text-[10px] text-right mt-1 opacity-0 group-hover:opacity-100 transition-opacity">

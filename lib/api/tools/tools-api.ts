@@ -305,6 +305,21 @@ export interface CreateToolDto {
 export interface UpdateToolDto extends Partial<CreateToolDto> {}
 
 /**
+ * Cấu hình hiển thị kết quả action dạng card trong chat.
+ * Chỉ nên bật cho action trả về danh sách (list) cần hiển thị dạng card.
+ */
+export interface CardConfig {
+  enabled?: boolean;
+  list_path?: string;
+  field_mapping?: {
+    title?: string;
+    url?: string;
+    imageUrl?: string;
+    description?: string;
+  };
+}
+
+/**
  * DTO for creating a tool action (POST /tools/:toolId/actions)
  */
 export interface CreateToolActionDto {
@@ -319,6 +334,7 @@ export interface CreateToolActionDto {
   };
   sort_order?: number;
   is_enabled?: boolean;
+  card_config?: CardConfig | null;
 }
 
 /**
@@ -342,6 +358,7 @@ export interface ToolAction {
   };
   sort_order: number;
   is_enabled: boolean;
+  card_config?: CardConfig | null;
   created_at?: string;
   updated_at?: string;
 }

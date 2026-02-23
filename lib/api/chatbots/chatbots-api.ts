@@ -88,6 +88,29 @@ export interface UploadedImage {
   size: number;
 }
 
+/** Card từ response chat (sản phẩm, bài viết, link). API có thể gửi title hoặc name, price/brand trong metadata hoặc top-level. */
+export interface ChatCard {
+  type: "product" | "article" | "link";
+  /** Tiêu đề (spec); API product có thể gửi name thay vì title */
+  title?: string;
+  name?: string;
+  description?: string;
+  imageUrl?: string | null;
+  url: string;
+  /** Product: có thể gửi price, brand ở top level */
+  price?: number;
+  brand?: string;
+  metadata?: Record<string, unknown> & {
+    price?: number;
+    brand?: string;
+    author?: string;
+    publishedAt?: string;
+    displayLink?: string;
+    id?: number;
+    slug?: string;
+  };
+}
+
 export interface ChatResponseDto {
   conversation_id?: string;
   response: string;
@@ -95,6 +118,7 @@ export interface ChatResponseDto {
   processingTime: number;
   files?: ChatFile[];
   uploaded_images?: UploadedImage[];
+  cards?: ChatCard[];
 }
 
 export interface ListChatbotsParams {

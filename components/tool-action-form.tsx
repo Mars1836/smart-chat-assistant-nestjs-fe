@@ -14,9 +14,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Trash2, Code, LayoutList, GripVertical } from "lucide-react";
+import { Plus, Trash2, Code, LayoutList, GripVertical, LayoutGrid, HelpCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { toast } from "sonner";
 
 export interface ActionFormState {
@@ -29,6 +34,13 @@ export interface ActionFormState {
   params_mapping_json: string;
   sort_order: number;
   is_enabled: boolean;
+  /** Card config: hiển thị kết quả dạng card trong chat */
+  card_enabled?: boolean;
+  card_list_path?: string;
+  card_field_title?: string;
+  card_field_url?: string;
+  card_field_imageUrl?: string;
+  card_field_description?: string;
 }
 
 interface ParameterItem {
@@ -291,6 +303,99 @@ export function ToolActionForm({
           />
         </div>
       </div>
+
+      {/* Card config: hiển thị kết quả dạng card trong chat */}
+      <Collapsible defaultOpen={!!formData.card_enabled} className="border rounded-lg">
+        <CollapsibleTrigger asChild>
+          <button type="button" className="w-full flex items-center justify-between p-3 hover:bg-muted/30 transition-colors text-left">
+            <span className="flex items-center gap-2 font-medium text-sm">
+              <LayoutGrid className="w-4 h-4 text-muted-foreground" />
+              Hiển thị dạng card trong chat
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {formData.card_enabled ? "Đang bật" : "Tắt"}
+            </span>
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="px-3 pb-3 pt-0 space-y-3 border-t">
+            <div className="flex items-center justify-between pt-3">
+              <Label className="text-xs cursor-pointer" htmlFor="card_enabled">
+                Bật hiển thị kết quả dạng card (sản phẩm, bài viết, link) trong tin nhắn chatbot
+              </Label>
+              <Switch
+                id="card_enabled"
+                checked={!!formData.card_enabled}
+                onCheckedChange={(c) => setFormData({ ...formData, card_enabled: c })}
+              />
+            </div>
+            <p className="text-[11px] text-muted-foreground flex items-start gap-1">
+              <HelpCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+              Chỉ nên bật cho action trả về <strong>danh sách</strong> (list). Action trả về 1 object chi tiết thường không cần.
+            </p>
+            {formData.card_enabled && (
+              <>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Đường dẫn tới mảng trong response (list_path)</Label>
+                  <Input
+                    value={formData.card_list_path ?? ""}
+                    onChange={(e) => setFormData({ ...formData, card_list_path: e.target.value.trim() || undefined })}
+                    placeholder="vd: data, items, response.items"
+                    className="h-8 text-xs font-mono"
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    Để trống: backend thử lần lượt data, items, results, list.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs">Map field API → card (tên field trong mỗi phần tử mảng)</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label className="text-[10px] text-muted-foreground">Title</Label>
+                      <Input
+                        value={formData.card_field_title ?? ""}
+                        onChange={(e) => setFormData({ ...formData, card_field_title: e.target.value.trim() || undefined })}
+                        placeholder="title hoặc name"
+                        className="h-7 text-xs font-mono mt-0.5"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-[10px] text-muted-foreground">URL</Label>
+                      <Input
+                        value={formData.card_field_url ?? ""}
+                        onChange={(e) => setFormData({ ...formData, card_field_url: e.target.value.trim() || undefined })}
+                        placeholder="url hoặc link"
+                        className="h-7 text-xs font-mono mt-0.5"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-[10px] text-muted-foreground">Image URL</Label>
+                      <Input
+                        value={formData.card_field_imageUrl ?? ""}
+                        onChange={(e) => setFormData({ ...formData, card_field_imageUrl: e.target.value.trim() || undefined })}
+                        placeholder="imageUrl hoặc thumbnail"
+                        className="h-7 text-xs font-mono mt-0.5"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-[10px] text-muted-foreground">Description</Label>
+                      <Input
+                        value={formData.card_field_description ?? ""}
+                        onChange={(e) => setFormData({ ...formData, card_field_description: e.target.value.trim() || undefined })}
+                        placeholder="description hoặc snippet"
+                        className="h-7 text-xs font-mono mt-0.5"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">
+                    Key = field chuẩn card (title, url, imageUrl, description). Chỉ cần điền field API khác tên; trống = dùng đúng tên.
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
 
       {/* Mode Toggle */}
       <div className="flex items-center justify-between pt-2 border-t">

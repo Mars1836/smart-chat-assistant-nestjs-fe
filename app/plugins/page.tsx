@@ -50,6 +50,7 @@ import {
   Edit2,
   Filter,
   ArrowUpDown,
+  Upload,
 } from "lucide-react";
 import { useWorkspace } from "@/lib/stores/workspace-store";
 import {
@@ -60,6 +61,7 @@ import { OAuthConnectDialog } from "@/components/oauth-connect-dialog";
 import { ApiKeyConfigDialog } from "@/components/api-key-config-dialog";
 import { PluginActionsDialog } from "@/components/plugin-actions-dialog";
 import { CreateToolDialog } from "@/components/create-tool-dialog";
+import { ImportPluginDialog } from "@/components/import-plugin-dialog";
 import { ToolActionsManager } from "@/components/tool-actions-manager";
 
 // Icon mapping for tool types
@@ -133,6 +135,7 @@ function PluginsContent() {
   const [apiKeyDialogOpen, setApiKeyDialogOpen] = useState(false);
   const [actionsDialogOpen, setActionsDialogOpen] = useState(false);
   const [createToolDialogOpen, setCreateToolDialogOpen] = useState(false);
+  const [importPluginDialogOpen, setImportPluginDialogOpen] = useState(false);
   const [manageActionsDialogOpen, setManageActionsDialogOpen] = useState(false);
 
   const [selectedPlugin, setSelectedPlugin] = useState<Plugin | null>(null);
@@ -382,9 +385,17 @@ function PluginsContent() {
           </p>
         </div>
 
-        {/* Create Tool - Added */}
-        <div className="flex justify-end">
-          <Button 
+        {/* Create Tool & Import Plugin */}
+        <div className="flex justify-end gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setImportPluginDialogOpen(true)}
+            className="gap-2"
+          >
+            <Upload className="w-4 h-4" />
+            Import Plugin
+          </Button>
+          <Button
             onClick={() => setCreateToolDialogOpen(true)}
             className="gap-2"
           >
@@ -786,6 +797,16 @@ function PluginsContent() {
             onOpenChange={setCreateToolDialogOpen}
             workspaceId={selectedWorkspace.id}
             onToolCreated={handleToolCreated}
+          />
+        )}
+
+        {/* Import Plugin Dialog */}
+        {selectedWorkspace && (
+          <ImportPluginDialog
+            open={importPluginDialogOpen}
+            onOpenChange={setImportPluginDialogOpen}
+            workspaceId={selectedWorkspace.id}
+            onImported={handleToolCreated}
           />
         )}
 

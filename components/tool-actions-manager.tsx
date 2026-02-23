@@ -31,6 +31,7 @@ import {
   toolActionsApi,
   type ToolAction,
   type CreateToolActionDto,
+  type CardConfig,
   type Plugin,
 } from "@/lib/api";
 import { ToolActionForm, type ActionFormState } from "@/components/tool-action-form";
@@ -60,6 +61,7 @@ const defaultActionForm: ActionFormState = {
   params_mapping_json: JSON.stringify({}, null, 2),
   sort_order: 0,
   is_enabled: true,
+  card_enabled: false,
 };
 
 export function ToolActionsManager({
@@ -109,6 +111,7 @@ export function ToolActionsManager({
   };
 
   const mapActionToFormState = (action: ToolAction): ActionFormState => {
+    const cc = action.card_config;
     return {
       name: action.name,
       display_name: action.display_name,
@@ -119,6 +122,26 @@ export function ToolActionsManager({
       params_mapping_json: JSON.stringify(action.executor_config?.params || {}, null, 2),
       sort_order: action.sort_order,
       is_enabled: action.is_enabled,
+      card_enabled: cc?.enabled !== false && !!cc,
+      card_list_path: cc?.list_path,
+      card_field_title: cc?.field_mapping?.title,
+      card_field_url: cc?.field_mapping?.url,
+      card_field_imageUrl: cc?.field_mapping?.imageUrl,
+      card_field_description: cc?.field_mapping?.description,
+    };
+  };
+
+  const buildCardConfig = (form: ActionFormState): CardConfig | null | undefined => {
+    if (!form.card_enabled) return null;
+    const fm: CardConfig["field_mapping"] = {};
+    if (form.card_field_title?.trim()) fm.title = form.card_field_title.trim();
+    if (form.card_field_url?.trim()) fm.url = form.card_field_url.trim();
+    if (form.card_field_imageUrl?.trim()) fm.imageUrl = form.card_field_imageUrl.trim();
+    if (form.card_field_description?.trim()) fm.description = form.card_field_description.trim();
+    return {
+      enabled: true,
+      list_path: form.card_list_path?.trim() || undefined,
+      field_mapping: Object.keys(fm).length > 0 ? fm : undefined,
     };
   };
 
@@ -160,6 +183,7 @@ export function ToolActionsManager({
         },
         sort_order: formData.sort_order,
         is_enabled: formData.is_enabled,
+        card_config: buildCardConfig(formData),
       };
 
       await toolActionsApi.create(tool.id, payload);
@@ -205,6 +229,7 @@ export function ToolActionsManager({
         },
         sort_order: formData.sort_order,
         is_enabled: formData.is_enabled,
+        card_config: buildCardConfig(formData),
       });
 
       toast.success("Cập nhật action thành công");

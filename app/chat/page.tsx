@@ -23,6 +23,7 @@ import {
   type ConversationResponseDto,
   type MessageResponseDto,
   type ChatFile,
+  type ChatCard,
   type UploadedImage,
 } from "@/lib/api";
 import { API_BASE_URL } from "@/lib/constants";
@@ -37,6 +38,7 @@ interface Message {
   timestamp: Date;
   files?: ChatFile[];
   userImages?: UploadedImage[];
+  cards?: ChatCard[];
 }
 
 export default function ChatPage() {
@@ -400,6 +402,7 @@ export default function ChatPage() {
         content: response.response,
         timestamp: new Date(),
         files: response.files,
+        cards: response.cards && response.cards.length > 0 ? response.cards : undefined,
       };
       setMessages((prev) => [...prev, aiMessage]);
     } catch (err) {
@@ -701,6 +704,54 @@ export default function ChatPage() {
                           </div>
                         )}
                       </Card>
+                    )}
+                    {message.role === "assistant" && message.cards && message.cards.length > 0 && (
+                      <div className="mt-2 grid grid-cols-1 gap-2 w-full max-w-md">
+                        {message.cards.map((card, index) => (
+                          <a
+                            key={index}
+                            href={card.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`flex gap-3 rounded-lg border bg-card hover:bg-muted/50 hover:border-primary/30 transition-colors overflow-hidden text-left ${
+                              card.type === "product" ? "border-amber-200/50" : card.type === "article" ? "border-blue-200/50" : "border-border"
+                            }`}
+                          >
+                            {card.imageUrl && (
+                              <div className="w-20 h-20 shrink-0 bg-muted">
+                                <img
+                                  src={card.imageUrl}
+                                  alt={card.title || card.name || ""}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0 py-2 pr-2">
+                              <p className="font-medium text-sm line-clamp-1 text-foreground">{card.title || card.name || ""}</p>
+                              {(card.description || (card.type === "product" && (card.metadata?.brand ?? card.brand))) && (
+                                <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
+                                  {card.description || (card.type === "product" ? (card.metadata?.brand ?? card.brand) : "")}
+                                </p>
+                              )}
+                              {card.type === "product" && (card.metadata?.price != null || card.price != null) && (
+                                <p className="text-xs font-medium text-amber-700 dark:text-amber-400 mt-1">
+                                  {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format((card.metadata?.price ?? card.price)!)}
+                                </p>
+                              )}
+                              {card.type === "article" && (card.metadata?.author || card.metadata?.publishedAt) && (
+                                <p className="text-[10px] text-muted-foreground mt-1">
+                                  {[card.metadata.author, card.metadata.publishedAt].filter(Boolean).join(" · ")}
+                                </p>
+                              )}
+                              <p className="text-[10px] text-muted-foreground mt-1 truncate" title={card.url}>
+                                {card.metadata?.displayLink ?? (() => {
+                                  try { const u = new URL(card.url); return u.hostname + (u.pathname !== "/" ? u.pathname : ""); } catch { return card.url; }
+                                })()}
+                              </p>
+                            </div>
+                          </a>
+                        ))}
+                      </div>
                     )}
                     <p className={`text-[10px] mt-1 px-1 ${
                       message.role === "user" ? "text-muted-foreground text-right" : "text-muted-foreground"
