@@ -30,6 +30,7 @@ import { API_BASE_URL } from "@/lib/constants";
 import { FileIcon, Download } from "lucide-react";
 import { toast } from "sonner";
 import { ImageViewer } from "@/components/image-viewer";
+import { MarkdownContent } from "@/components/markdown-content";
 
 interface Message {
   id: string;
@@ -673,7 +674,11 @@ export default function ChatPage() {
                       >
                         {/* Text Content */}
                         {message.content && (
-                           <p className="text-sm decoration-slice whitespace-pre-wrap">{message.content}</p>
+                          message.role === "assistant" ? (
+                            <MarkdownContent content={message.content} />
+                          ) : (
+                            <p className="text-sm box-decoration-slice whitespace-pre-wrap">{message.content}</p>
+                          )
                         )}
                         
                         {/* Other Files */}

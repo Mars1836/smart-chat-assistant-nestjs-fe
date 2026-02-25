@@ -36,6 +36,26 @@ export interface WorkspaceResponseDto {
   created_by_id?: string | null;
 }
 
+export interface WorkspaceWallet {
+  workspace_id: string;
+  balance: number;
+  currency: string;
+  status: string;
+  updated_at: string;
+}
+
+export interface WorkspaceVietQRTopup {
+  amount: number;
+  currency: string;
+  reference: string;
+  qr_image_url: string;
+  bank: {
+    bank_id: string;
+    account_no: string;
+    account_name: string | null;
+  };
+}
+
 export interface PaginatedResponse<T> {
   data: T[];
   meta: {
@@ -189,6 +209,30 @@ export const workspacesApi = {
   get: async (id: string): Promise<WorkspaceResponseDto> => {
     const response = await client.get<WorkspaceResponseDto>(
       workspacesEndpoints.get(id)
+    );
+    return response.data;
+  },
+
+  /**
+   * Get workspace billing wallet
+   */
+  getWallet: async (workspaceId: string): Promise<WorkspaceWallet> => {
+    const response = await client.get<WorkspaceWallet>(
+      workspacesEndpoints.wallet(workspaceId)
+    );
+    return response.data;
+  },
+
+  /**
+   * Create VietQR topup for workspace
+   */
+  createVietQRTopup: async (
+    workspaceId: string,
+    amount: number
+  ): Promise<WorkspaceVietQRTopup> => {
+    const response = await client.post<WorkspaceVietQRTopup>(
+      workspacesEndpoints.vietqr(workspaceId),
+      { amount }
     );
     return response.data;
   },

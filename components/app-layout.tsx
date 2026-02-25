@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/stores/auth-store";
 import { useWorkspace } from "@/lib/stores/workspace-store";
+import { workspacesApi, type WorkspaceWallet } from "@/lib/api";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -38,6 +39,8 @@ interface AppLayoutProps {
 export function AppLayout({ children, activeModule }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [wallet, setWallet] = useState<WorkspaceWallet | null>(null);
+  const [walletLoading, setWalletLoading] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const { logout } = useAuth();
@@ -58,6 +61,28 @@ export function AppLayout({ children, activeModule }: AppLayoutProps) {
     loadWorkspaces();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Load wallet when workspace changes
+  useEffect(() => {
+    const loadWallet = async () => {
+      if (!selectedWorkspace) {
+        setWallet(null);
+        return;
+      }
+      try {
+        setWalletLoading(true);
+        const data = await workspacesApi.getWallet(selectedWorkspace.id);
+        setWallet(data);
+      } catch (error) {
+        // Silent fail – không chặn UI nếu ví lỗi
+        setWallet(null);
+      } finally {
+        setWalletLoading(false);
+      }
+    };
+
+    loadWallet();
+  }, [selectedWorkspace]);
 
   // Redirect to workspace selection if no workspace is selected
   useEffect(() => {
@@ -229,6 +254,28 @@ export function AppLayout({ children, activeModule }: AppLayoutProps) {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+
+            {/* Workspace Wallet */}
+            {selectedWorkspace && (
+              <div className="flex flex-col items-end text-xs min-w-[180px]">
+                <span className="font-medium">
+                  Số dư:{" "}
+                  {walletLoading
+                    ? "Đang tải..."
+                    : wallet
+                    ? `${new Intl.NumberFormat("vi-VN", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      }).format(wallet.balance)} ${wallet.currency}`
+                    : "Không có dữ liệu"}
+                </span>
+                {wallet && wallet.status !== "active" && (
+                  <span className="mt-0.5 text-destructive">
+                    Ví đang bị tạm khóa
+                  </span>
+                )}
+              </div>
+            )}
 
             {/* User Menu */}
             <DropdownMenu>

@@ -19,6 +19,7 @@ import {
   type UploadedImage,
 } from "@/lib/api";
 import { API_BASE_URL } from "@/lib/constants";
+import { MarkdownContent } from "@/components/markdown-content";
 
 interface ChatbotChatDialogProps {
   open: boolean;
@@ -284,7 +285,11 @@ export function ChatbotChatDialog({
                         : "bg-card border shadow-sm rounded-bl-none"
                   }`}
                 >
-                  <p className="whitespace-pre-wrap">{message.content}</p>
+                  {message.role === "assistant" ? (
+                    <MarkdownContent content={message.content} />
+                  ) : (
+                    <p className="whitespace-pre-wrap">{message.content}</p>
+                  )}
                   
                   {/* Display user uploaded images */}
                   {message.userImages && message.userImages.length > 0 && (

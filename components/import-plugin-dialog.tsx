@@ -41,29 +41,31 @@ export interface ImportPluginJson {
       value?: string;
     };
   };
-  actions?: Array<{
-    name: string;
-    display_name: string;
-    description?: string;
-    parameters?: Record<string, unknown>;
-    executor_config?: {
-      method?: string;
-      endpoint?: string;
-      params?: Record<string, unknown>;
+  actions?: ImportPluginAction[];
+}
+
+export interface ImportPluginAction {
+  name: string;
+  display_name: string;
+  description?: string;
+  parameters?: Record<string, unknown>;
+  executor_config?: {
+    method?: string;
+    endpoint?: string;
+    params?: Record<string, unknown>;
+  };
+  sort_order?: number;
+  is_enabled?: boolean;
+  card_config?: {
+    enabled?: boolean;
+    list_path?: string;
+    field_mapping?: {
+      title?: string;
+      url?: string;
+      imageUrl?: string;
+      description?: string;
     };
-    sort_order?: number;
-    is_enabled?: boolean;
-    card_config?: {
-      enabled?: boolean;
-      list_path?: string;
-      field_mapping?: {
-        title?: string;
-        url?: string;
-        imageUrl?: string;
-        description?: string;
-      };
-    } | null;
-  }>;
+  } | null;
 }
 
 interface ImportPluginDialogProps {
@@ -115,7 +117,7 @@ function mapImportToCreateCustomDto(json: ImportPluginJson): CreateCustomToolDto
 }
 
 function mapImportActionToDto(
-  a: ImportPluginJson["actions"][0]
+  a: ImportPluginAction
 ): CreateToolActionDto {
   const dto: CreateToolActionDto = {
     name: a.name,
@@ -132,15 +134,21 @@ function mapImportActionToDto(
     sort_order: a.sort_order ?? 0,
     is_enabled: a.is_enabled !== false,
   };
-  if (a.card_config != null) {
-    dto.card_config = a.card_config.enabled === false ? null : {
+
+  // Gửi card_config rõ ràng để backend lưu (object sạch, bỏ undefined)
+  if (a.card_config != null && a.card_config.enabled !== false) {
+    const fm = a.card_config.field_mapping;
+    const hasFieldMapping =
+      fm && typeof fm === "object" && Object.keys(fm).length > 0;
+    const cardConfig: NonNullable<CreateToolActionDto["card_config"]> = {
       enabled: true,
-      list_path: a.card_config.list_path?.trim() || undefined,
-      field_mapping: a.card_config.field_mapping && Object.keys(a.card_config.field_mapping).length > 0
-        ? a.card_config.field_mapping
-        : undefined,
     };
+    const listPath = a.card_config.list_path?.trim();
+    if (listPath) cardConfig.list_path = listPath;
+    if (hasFieldMapping && fm) cardConfig.field_mapping = { ...fm };
+    dto.card_config = cardConfig;
   }
+
   return dto;
 }
 
@@ -209,7 +217,18 @@ export function ImportPluginDialog({
         (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)
       );
       for (const action of sorted) {
-        await toolActionsApi.create(created.id, mapImportActionToDto(action));
+        const payload = mapImportActionToDto(action);
+        const createdAction = await toolActionsApi.create(created.id, payload);
+        // Một số backend chỉ lưu card_config khi PATCH; gửi lại card_config qua update
+        if (payload.card_config != null) {
+          try {
+            await toolActionsApi.update(created.id, createdAction.id, {
+              card_config: payload.card_config,
+            });
+          } catch (_) {
+            // Bỏ qua nếu update thất bại (vd backend không hỗ trợ PATCH card_config)
+          }
+        }
       }
 
       toast.success(

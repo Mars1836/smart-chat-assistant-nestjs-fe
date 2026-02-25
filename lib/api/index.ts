@@ -29,6 +29,8 @@ export {
   type WorkspaceChatbot,
   type PaginatedResponse,
   type ListWorkspacesParams,
+  type WorkspaceWallet,
+  type WorkspaceVietQRTopup,
 } from "./workspaces/workspaces-api";
 export { workspacesEndpoints } from "./workspaces/endpoints";
 
