@@ -206,10 +206,143 @@
     
     .scw-message.scw-bot {
       background: white;
-      color: #333;
+      color: #111827;
       align-self: flex-start;
       border-bottom-left-radius: 4px;
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+
+    .scw-message.scw-bot p {
+      margin: 4px 0;
+    }
+
+    .scw-message.scw-bot h1,
+    .scw-message.scw-bot h2,
+    .scw-message.scw-bot h3 {
+      margin: 6px 0 4px;
+      font-weight: 600;
+    }
+
+    .scw-message.scw-bot h1 { font-size: 16px; }
+    .scw-message.scw-bot h2 { font-size: 15px; }
+    .scw-message.scw-bot h3 { font-size: 14px; }
+
+    .scw-message.scw-bot ul,
+    .scw-message.scw-bot ol {
+      margin: 4px 0 4px 18px;
+      padding: 0;
+    }
+
+    .scw-message.scw-bot li {
+      margin: 2px 0;
+    }
+
+    .scw-message.scw-bot a {
+      color: ${config.primaryColor};
+      text-decoration: underline;
+    }
+
+    .scw-message.scw-bot code {
+      background: #f3f4f6;
+      padding: 2px 4px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    .scw-message.scw-bot pre {
+      background: #0f172a;
+      color: #e5e7eb;
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      overflow-x: auto;
+      margin: 6px 0;
+    }
+
+    .scw-message.scw-bot pre code {
+      background: transparent;
+      padding: 0;
+      color: inherit;
+    }
+
+    .scw-card-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .scw-card {
+      display: flex;
+      gap: 8px;
+      padding: 8px;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+      background: #f9fafb;
+      text-decoration: none;
+      color: inherit;
+      transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+    }
+
+    .scw-card:hover {
+      background: #f3f4f6;
+      border-color: ${config.primaryColor}33;
+      transform: translateY(-1px);
+    }
+
+    .scw-card-image {
+      width: 56px;
+      height: 56px;
+      border-radius: 8px;
+      overflow: hidden;
+      flex-shrink: 0;
+      background: #e5e7eb;
+    }
+
+    .scw-card-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .scw-card-content {
+      flex: 1;
+      min-width: 0;
+      font-size: 12px;
+    }
+
+    .scw-card-title {
+      font-weight: 600;
+      margin-bottom: 2px;
+      color: #111827;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .scw-card-desc {
+      font-size: 11px;
+      color: #6b7280;
+      max-height: 2.6em;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      margin-bottom: 2px;
+    }
+
+    .scw-card-meta {
+      font-size: 11px;
+      color: #6b7280;
+    }
+
+    .scw-card-price {
+      font-size: 11px;
+      font-weight: 600;
+      color: #b45309;
+      margin-top: 2px;
     }
     
     .scw-message.scw-user {
@@ -415,16 +548,155 @@
     }
   }
 
+  // Very small markdown renderer for bot messages
+  function escapeHtml(str) {
+    return str
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+
+  function renderMarkdownToHtml(text) {
+    if (!text) return "";
+
+    // Escape HTML first
+    let html = escapeHtml(text);
+
+    // Code blocks ```...```
+    html = html.replace(/```([\s\S]*?)```/g, function(_, code) {
+      return '<pre><code>' + code.trim() + '</code></pre>';
+    });
+
+    // Inline code `code`
+    html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
+
+    // Bold **text**
+    html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+
+    // Italic *text*
+    html = html.replace(/\*([^*]+)\*/g, "<em>$1</em>");
+
+    // Convert simple markdown links [text](url)
+    html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+
+    // Preserve line breaks
+    html = html.replace(/\n/g, "<br/>");
+
+    return html;
+  }
+
   // Add message to chat
   function addMessage(text, type) {
     const messagesEl = document.getElementById('scw-messages');
     const messageEl = document.createElement('div');
     messageEl.className = `scw-message scw-${type}`;
-    messageEl.textContent = text;
+
+    if (type === 'bot') {
+      // Render markdown for bot messages
+      messageEl.innerHTML = renderMarkdownToHtml(text);
+    } else {
+      // Keep user messages as plain text
+      messageEl.textContent = text;
+    }
+
     messagesEl.appendChild(messageEl);
     messagesEl.scrollTop = messagesEl.scrollHeight;
     
     messages.push({ text, type });
+  }
+
+  // Add rich cards (products/articles/links) below a bot message
+  function addCards(cards) {
+    if (!cards || !cards.length) return;
+
+    const messagesEl = document.getElementById('scw-messages');
+    const listEl = document.createElement('div');
+    listEl.className = 'scw-card-list';
+
+    cards.forEach((card) => {
+      if (!card || !card.url) return;
+
+      const title = card.title || card.name || card.url;
+      const isProduct = card.type === 'product';
+      const isArticle = card.type === 'article';
+
+      const price = (card.metadata && card.metadata.price != null)
+        ? card.metadata.price
+        : card.price;
+
+      const brand = (card.metadata && card.metadata.brand) || card.brand;
+      const author = card.metadata && card.metadata.author;
+      const publishedAt = card.metadata && card.metadata.publishedAt;
+      const displayLink = card.metadata && card.metadata.displayLink;
+
+      const cardEl = document.createElement('a');
+      cardEl.href = card.url;
+      cardEl.target = '_blank';
+      cardEl.rel = 'noopener noreferrer';
+      cardEl.className = 'scw-card';
+
+      if (card.imageUrl) {
+        const imgWrap = document.createElement('div');
+        imgWrap.className = 'scw-card-image';
+        const img = document.createElement('img');
+        img.src = card.imageUrl;
+        img.alt = title;
+        imgWrap.appendChild(img);
+        cardEl.appendChild(imgWrap);
+      }
+
+      const contentEl = document.createElement('div');
+      contentEl.className = 'scw-card-content';
+
+      const titleEl = document.createElement('div');
+      titleEl.className = 'scw-card-title';
+      titleEl.textContent = title;
+      contentEl.appendChild(titleEl);
+
+      const descText = card.description || (isProduct && brand ? brand : '');
+      if (descText) {
+        const descEl = document.createElement('div');
+        descEl.className = 'scw-card-desc';
+        descEl.textContent = descText;
+        contentEl.appendChild(descEl);
+      }
+
+      if (isProduct && price != null) {
+        try {
+          const priceEl = document.createElement('div');
+          priceEl.className = 'scw-card-price';
+          priceEl.textContent = new Intl.NumberFormat('vi-VN', {
+            style: 'currency',
+            currency: 'VND',
+          }).format(price);
+          contentEl.appendChild(priceEl);
+        } catch (_) {
+          // ignore Intl errors
+        }
+      }
+
+      if (isArticle && (author || publishedAt)) {
+        const metaEl = document.createElement('div');
+        metaEl.className = 'scw-card-meta';
+        metaEl.textContent = [author, publishedAt].filter(Boolean).join(' · ');
+        contentEl.appendChild(metaEl);
+      }
+
+      if (displayLink || card.url) {
+        const linkEl = document.createElement('div');
+        linkEl.className = 'scw-card-meta';
+        linkEl.textContent = displayLink || card.url;
+        contentEl.appendChild(linkEl);
+      }
+
+      cardEl.appendChild(contentEl);
+      listEl.appendChild(cardEl);
+    });
+
+    if (listEl.children.length > 0) {
+      messagesEl.appendChild(listEl);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
   }
 
   // Show typing indicator
@@ -504,6 +776,11 @@
       
       hideTyping();
       addMessage(data.response || data.message || t.error, 'bot');
+
+      // Render cards if present (products/articles/links)
+      if (Array.isArray(data.cards) && data.cards.length > 0) {
+        addCards(data.cards);
+      }
       
     } catch (error) {
       console.error('[Smart Chat Widget] Error:', error);
