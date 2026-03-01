@@ -7,6 +7,19 @@ import { messagesEndpoints } from "./endpoints";
 import type { PaginatedResponse } from "../workspaces/workspaces-api";
 import type { ChatFile } from "../chatbots/chatbots-api";
 
+/** Token usage for a bot message (router + answer). */
+export interface MessageTokenUsage {
+  input_tokens: number;
+  output_tokens: number;
+}
+
+/** One tool call in a bot message. */
+export interface MessageToolUsed {
+  tool_name: string;
+  args: Record<string, unknown>;
+  result: unknown;
+}
+
 // Types
 export interface MessageResponseDto {
   id: string;
@@ -18,6 +31,10 @@ export interface MessageResponseDto {
   created_at: string;
   updated_at: string;
   attachments?: ChatFile[];
+  /** Bot only: token usage for this turn. */
+  token_usage?: MessageTokenUsage | null;
+  /** Bot only: tools invoked in this turn. */
+  tools_used?: MessageToolUsed[] | null;
 }
 
 export interface ListMessagesParams {

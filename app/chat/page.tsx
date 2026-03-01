@@ -10,7 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Send, Loader2, Bot, ChevronDown, Check, ImagePlus, X } from "lucide-react";
+import { Plus, Send, Loader2, Bot, ChevronDown, Check, ImagePlus, X, ChevronUp } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import {
   chatbotsApi,
@@ -25,6 +25,8 @@ import {
   type ChatFile,
   type ChatCard,
   type UploadedImage,
+  type MessageTokenUsage,
+  type MessageToolUsed,
 } from "@/lib/api";
 import { API_BASE_URL } from "@/lib/constants";
 import { FileIcon, Download } from "lucide-react";
@@ -40,6 +42,58 @@ interface Message {
   files?: ChatFile[];
   userImages?: UploadedImage[];
   cards?: ChatCard[];
+  token_usage?: MessageTokenUsage | null;
+  tools_used?: MessageToolUsed[] | null;
+}
+
+function ToolUsedBlock({ tool }: { tool: MessageToolUsed }) {
+  const [expandResult, setExpandResult] = useState(false);
+  const resultStr =
+    typeof tool.result === "string"
+      ? tool.result
+      : JSON.stringify(tool.result, null, 2);
+  const isLong = resultStr.length > 200;
+  return (
+    <div className="rounded border border-border bg-background/50 p-2 space-y-1">
+      <p className="font-medium text-foreground">{tool.tool_name}</p>
+      <p className="text-muted-foreground">
+        <span className="text-muted-foreground/80">Args:</span>{" "}
+        <code className="text-[10px] break-all">
+          {JSON.stringify(tool.args, null, 2)}
+        </code>
+      </p>
+      <div>
+        <span className="text-muted-foreground/80">Result:</span>{" "}
+        {isLong && !expandResult ? (
+          <>
+            <code className="text-[10px] block mt-1 whitespace-pre-wrap break-all line-clamp-3">
+              {resultStr.slice(0, 200)}…
+            </code>
+            <button
+              type="button"
+              className="text-primary hover:underline mt-1 text-[10px]"
+              onClick={() => setExpandResult(true)}
+            >
+              Mở rộng
+            </button>
+          </>
+        ) : (
+          <code className="text-[10px] block mt-1 whitespace-pre-wrap break-all max-h-40 overflow-auto">
+            {resultStr}
+          </code>
+        )}
+        {isLong && expandResult && (
+          <button
+            type="button"
+            className="text-primary hover:underline mt-1 text-[10px]"
+            onClick={() => setExpandResult(false)}
+          >
+            Thu gọn
+          </button>
+        )}
+      </div>
+    </div>
+  );
 }
 
 export default function ChatPage() {
@@ -68,6 +122,7 @@ export default function ChatPage() {
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [viewingImage, setViewingImage] = useState<string | null>(null);
+  const [openDetailsId, setOpenDetailsId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -248,6 +303,8 @@ export default function ChatPage() {
         content: msg.content,
         timestamp: new Date(msg.created_at),
         files: msg.attachments,
+        token_usage: msg.token_usage ?? undefined,
+        tools_used: msg.tools_used ?? undefined,
       }));
     } catch (err) {
       console.error("Error loading messages:", err);
@@ -404,6 +461,8 @@ export default function ChatPage() {
         timestamp: new Date(),
         files: response.files,
         cards: response.cards && response.cards.length > 0 ? response.cards : undefined,
+        token_usage: response.token_usage ?? undefined,
+        tools_used: response.tools_used ?? undefined,
       };
       setMessages((prev) => [...prev, aiMessage]);
     } catch (err) {
@@ -756,6 +815,64 @@ export default function ChatPage() {
                             </div>
                           </a>
                         ))}
+                      </div>
+                    )}
+                    {/* Nút Chi tiết cho mọi tin nhắn bot → xem tokens & tools nếu có */}
+                    {message.role === "assistant" && (
+                      <div className="mt-1.5 w-full max-w-md">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground">
+                          <span>
+                            {(message.token_usage?.input_tokens ?? 0) +
+                              (message.token_usage?.output_tokens ?? 0)}{" "}
+                            tokens
+                          </span>
+                          <span>{message.tools_used?.length ?? 0} tool(s)</span>
+                          <button
+                            type="button"
+                            className="text-primary hover:underline inline-flex items-center gap-0.5 font-medium"
+                            onClick={() =>
+                              setOpenDetailsId((id) =>
+                                id === message.id ? null : message.id
+                              )
+                            }
+                          >
+                            {openDetailsId === message.id ? (
+                              <>Thu gọn <ChevronUp className="w-3 h-3" /></>
+                            ) : (
+                              <>Chi tiết <ChevronDown className="w-3 h-3" /></>
+                            )}
+                          </button>
+                        </div>
+                        {openDetailsId === message.id && (
+                          <div className="mt-2 rounded-lg border bg-muted/50 p-3 text-xs space-y-3">
+                            <div>
+                              <p className="font-medium text-foreground mb-1">
+                                Token usage (lượt chat này)
+                              </p>
+                              <div className="font-mono text-muted-foreground space-y-0.5">
+                                <p>Input: {message.token_usage?.input_tokens ?? 0}</p>
+                                <p>Output: {message.token_usage?.output_tokens ?? 0}</p>
+                                <p className="border-t border-border pt-1 mt-1">
+                                  Total:{" "}
+                                  {(message.token_usage?.input_tokens ?? 0) +
+                                    (message.token_usage?.output_tokens ?? 0)}
+                                </p>
+                              </div>
+                            </div>
+                            <div>
+                              <p className="font-medium text-foreground mb-1">
+                                Tools used ({message.tools_used?.length ?? 0})
+                              </p>
+                              {(message.tools_used?.length ?? 0) > 0 && (
+                                <div className="space-y-2">
+                                  {message.tools_used!.map((tool, idx) => (
+                                    <ToolUsedBlock key={idx} tool={tool} />
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                     <p className={`text-[10px] mt-1 px-1 ${

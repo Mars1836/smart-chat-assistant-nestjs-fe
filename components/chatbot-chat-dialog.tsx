@@ -10,13 +10,15 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Send, Bot, User, FileIcon, Download, ImagePlus, X } from "lucide-react";
+import { Loader2, Send, Bot, User, FileIcon, Download, ImagePlus, X, ChevronDown, ChevronUp } from "lucide-react";
 import {
   chatsApi,
   conversationsApi,
   type ChatFile,
   type ChatCard,
   type UploadedImage,
+  type MessageTokenUsage,
+  type MessageToolUsed,
 } from "@/lib/api";
 import { API_BASE_URL } from "@/lib/constants";
 import { MarkdownContent } from "@/components/markdown-content";
@@ -38,6 +40,56 @@ interface Message {
   files?: ChatFile[];
   userImages?: UploadedImage[];
   cards?: ChatCard[];
+  token_usage?: MessageTokenUsage | null;
+  tools_used?: MessageToolUsed[] | null;
+}
+
+function ToolUsedBlock({ tool }: { tool: MessageToolUsed }) {
+  const [expandResult, setExpandResult] = useState(false);
+  const resultStr =
+    typeof tool.result === "string"
+      ? tool.result
+      : JSON.stringify(tool.result, null, 2);
+  const isLong = resultStr.length > 200;
+  return (
+    <div className="rounded border border-border bg-background/50 p-2 space-y-1 text-xs">
+      <p className="font-medium">{tool.tool_name}</p>
+      <p className="text-muted-foreground">
+        <span className="opacity-80">Args:</span>{" "}
+        <code className="text-[10px] break-all">{JSON.stringify(tool.args, null, 2)}</code>
+      </p>
+      <div>
+        <span className="text-muted-foreground opacity-80">Result:</span>{" "}
+        {isLong && !expandResult ? (
+          <>
+            <code className="text-[10px] block mt-1 whitespace-pre-wrap break-all line-clamp-3">
+              {resultStr.slice(0, 200)}…
+            </code>
+            <button
+              type="button"
+              className="text-primary hover:underline mt-1 text-[10px]"
+              onClick={() => setExpandResult(true)}
+            >
+              Mở rộng
+            </button>
+          </>
+        ) : (
+          <code className="text-[10px] block mt-1 whitespace-pre-wrap break-all max-h-40 overflow-auto">
+            {resultStr}
+          </code>
+        )}
+        {isLong && expandResult && (
+          <button
+            type="button"
+            className="text-primary hover:underline mt-1 text-[10px]"
+            onClick={() => setExpandResult(false)}
+          >
+            Thu gọn
+          </button>
+        )}
+      </div>
+    </div>
+  );
 }
 
 export function ChatbotChatDialog({
@@ -53,6 +105,7 @@ export function ChatbotChatDialog({
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [openDetailsId, setOpenDetailsId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -217,6 +270,8 @@ export function ChatbotChatDialog({
         timestamp: new Date(),
         files: response.files,
         cards: response.cards && response.cards.length > 0 ? response.cards : undefined,
+        token_usage: response.token_usage ?? undefined,
+        tools_used: response.tools_used ?? undefined,
       };
 
       setMessages((prev) => [...prev, aiMessage]);
@@ -391,6 +446,52 @@ export function ChatbotChatDialog({
                           </div>
                         </a>
                       ))}
+                    </div>
+                  )}
+                  {/* Nút Chi tiết (token & tools) cho tin nhắn bot */}
+                  {message.role === "assistant" && !message.isError && (
+                    <div className="mt-1.5">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground">
+                        <span>
+                          {(message.token_usage?.input_tokens ?? 0) + (message.token_usage?.output_tokens ?? 0)} tokens
+                        </span>
+                        <span>{message.tools_used?.length ?? 0} tool(s)</span>
+                        <button
+                          type="button"
+                          className="text-primary hover:underline inline-flex items-center gap-0.5 font-medium"
+                          onClick={() => setOpenDetailsId((id) => (id === message.id ? null : message.id))}
+                        >
+                          {openDetailsId === message.id ? (
+                            <>Thu gọn <ChevronUp className="w-3 h-3" /></>
+                          ) : (
+                            <>Chi tiết <ChevronDown className="w-3 h-3" /></>
+                          )}
+                        </button>
+                      </div>
+                      {openDetailsId === message.id && (
+                        <div className="mt-2 rounded-lg border bg-muted/50 p-2.5 text-xs space-y-2">
+                          <div>
+                            <p className="font-medium mb-1">Token usage</p>
+                            <div className="font-mono text-muted-foreground space-y-0.5">
+                              <p>Input: {message.token_usage?.input_tokens ?? 0}</p>
+                              <p>Output: {message.token_usage?.output_tokens ?? 0}</p>
+                              <p className="border-t border-border pt-1 mt-1">
+                                Total: {(message.token_usage?.input_tokens ?? 0) + (message.token_usage?.output_tokens ?? 0)}
+                              </p>
+                            </div>
+                          </div>
+                          <div>
+                            <p className="font-medium mb-1">Tools used ({message.tools_used?.length ?? 0})</p>
+                            {(message.tools_used?.length ?? 0) > 0 && (
+                              <div className="space-y-2">
+                                {message.tools_used!.map((tool, idx) => (
+                                  <ToolUsedBlock key={idx} tool={tool} />
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                   <p className="text-[10px] text-right mt-1 opacity-0 group-hover:opacity-100 transition-opacity">

@@ -27,7 +27,7 @@ export default function SignupPage() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const checkAuth = useAuthStore((state) => state.checkAuth);
+  const setFromAuthResponse = useAuthStore((state) => state.setFromAuthResponse);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -64,11 +64,15 @@ export default function SignupPage() {
       tokenStorage.setAccessToken(response.accessToken);
       tokenStorage.setRefreshToken(response.refreshToken);
 
-      // Update auth state
-      checkAuth();
+      // Cập nhật state từ response (có system_role) – không cần gọi GET /profile
+      setFromAuthResponse(response);
 
-      // Navigate to workspace page on success
-      router.push("/workspace");
+      // Chuyển trang theo system_role (giống login)
+      if (response.system_role === "admin") {
+        router.push("/admin");
+      } else {
+        router.push("/workspace");
+      }
     } catch (err: any) {
       setError(
         err?.response?.data?.message ||

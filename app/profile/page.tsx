@@ -6,19 +6,20 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { User, Mail, Loader2, ArrowLeft, Moon, Sun, Bell } from "lucide-react";
-import { authApi, type ProfileResponse } from "@/lib/api";
+import { usersApi, type UserProfileDto } from "@/lib/api";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Switch } from "@/components/ui/switch";
 
 export default function ProfilePage() {
   const router = useRouter();
-  const [profile, setProfile] = useState<ProfileResponse | null>(null);
+  const [profile, setProfile] = useState<UserProfileDto | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    language: "vi",
   });
   
   // Preferences State (Mock)
@@ -34,23 +35,36 @@ export default function ProfilePage() {
   const loadProfile = async () => {
     try {
       setIsLoading(true);
-      const data = await authApi.getProfile();
+      const data = await usersApi.getProfile();
       setProfile(data);
       setFormData({
         name: data.name,
         email: data.email,
+        language: data.language || "vi",
       });
     } catch (error) {
       console.error("Failed to load profile:", error);
-      toast.error("Failed to load profile");
+      toast.error("Không tải được profile");
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleSaveProfile = async () => {
-    toast.info("Update profile API not implemented yet");
-    setIsEditing(false);
+    try {
+      await usersApi.updateProfile({
+        name: formData.name,
+        email: formData.email,
+        language: formData.language,
+      });
+      toast.success("Đã lưu thay đổi");
+      setIsEditing(false);
+      await loadProfile();
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string }; status?: number } };
+      if (e?.response?.status === 409) toast.error("Email đã được user khác sử dụng");
+      else toast.error(e?.response?.data?.message ?? "Không lưu được");
+    }
   };
 
   const handleBack = () => {
@@ -111,6 +125,20 @@ export default function ProfilePage() {
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       disabled={!isEditing}
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Ngôn ngữ</Label>
+                    <select
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                      value={formData.language}
+                      onChange={(e) =>
+                        setFormData({ ...formData, language: e.target.value })
+                      }
+                      disabled={!isEditing}
+                    >
+                      <option value="vi">Tiếng Việt</option>
+                      <option value="en">English</option>
+                    </select>
                   </div>
                 </div>
 

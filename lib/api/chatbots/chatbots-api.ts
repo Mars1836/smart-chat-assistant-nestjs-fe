@@ -111,6 +111,19 @@ export interface ChatCard {
   };
 }
 
+/** Token usage returned from POST chat (same shape as message). */
+export interface ChatResponseTokenUsage {
+  input_tokens: number;
+  output_tokens: number;
+}
+
+/** One tool used in the chat turn (same shape as message). */
+export interface ChatResponseToolUsed {
+  tool_name: string;
+  args: Record<string, unknown>;
+  result: unknown;
+}
+
 export interface ChatResponseDto {
   conversation_id?: string;
   response: string;
@@ -119,6 +132,10 @@ export interface ChatResponseDto {
   files?: ChatFile[];
   uploaded_images?: UploadedImage[];
   cards?: ChatCard[];
+  /** Token usage for this turn (router + answer). */
+  token_usage?: ChatResponseTokenUsage | null;
+  /** Tools invoked in this turn. */
+  tools_used?: ChatResponseToolUsed[] | null;
 }
 
 export interface ListChatbotsParams {

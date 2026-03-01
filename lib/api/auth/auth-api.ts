@@ -18,9 +18,15 @@ export interface RegisterRequest {
   avatar_url?: string;
 }
 
+/** Response từ login & register: token + thông tin user + system_role */
 export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
+  id: string;
+  name: string;
+  email: string;
+  /** "admin" | "user" | null – dùng để chuyển trang ngay sau login */
+  system_role: string | null;
 }
 
 export interface User {
@@ -34,6 +40,8 @@ export interface ProfileResponse {
   id: string;
   email: string;
   name: string;
+  /** Vai trò hệ thống: "admin" (quản trị) | "user" (người dùng) | null */
+  system_role: string | null;
 }
 
 export interface RefreshDto {

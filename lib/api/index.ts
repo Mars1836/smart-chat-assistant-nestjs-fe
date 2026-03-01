@@ -65,6 +65,32 @@ export { chatsApi } from "./chats/chats-api";
 export { chatsEndpoints } from "./chats/endpoints";
 // ChatDto and ChatResponseDto are exported from chatbots-api above
 
+// Users API
+export {
+  usersApi,
+  type UserProfileDto,
+  type CreateUserDto,
+  type UpdateUserDto,
+  type ListUsersParams,
+  type UserStatsSummary,
+  type UserStatsByDateItem,
+  type ListUserStatsByDateParams,
+} from "./users/users-api";
+export { usersEndpoints } from "./users/endpoints";
+
+// Payments API
+export {
+  paymentsApi,
+  type Payment,
+  type PaymentUser,
+  type ListPaymentsParams,
+  type PaymentStatsSummary,
+  type PaymentStatsSummaryParams,
+  type PaymentStatsByDateItem,
+  type ListPaymentStatsByDateParams,
+} from "./payments/payments-api";
+export { paymentsEndpoints } from "./payments/endpoints";
+
 // System Roles API
 export {
   systemRolesApi,
@@ -76,6 +102,8 @@ export { systemRolesEndpoints } from "./system-roles/endpoints";
 export {
   messagesApi,
   type MessageResponseDto,
+  type MessageTokenUsage,
+  type MessageToolUsed,
   type ListMessagesParams,
 } from "./messages/messages-api";
 export { messagesEndpoints } from "./messages/endpoints";
