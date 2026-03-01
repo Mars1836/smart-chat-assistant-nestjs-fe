@@ -31,6 +31,9 @@ export {
   type ListWorkspacesParams,
   type WorkspaceWallet,
   type WorkspaceVietQRTopup,
+  type BillingTransaction,
+  type BillingTransactionUser,
+  type ListBillingTransactionsParams,
 } from "./workspaces/workspaces-api";
 export { workspacesEndpoints } from "./workspaces/endpoints";
 
@@ -90,6 +93,17 @@ export {
   type ListPaymentStatsByDateParams,
 } from "./payments/payments-api";
 export { paymentsEndpoints } from "./payments/endpoints";
+
+// LLM Models API
+export {
+  llmModelsApi,
+  type LlmModelPricingItem,
+  type LlmModel,
+  type CreateLlmModelDto,
+  type UpdateLlmModelDto,
+  type ListLlmModelsParams,
+} from "./llm-models/llm-models-api";
+export { llmModelsEndpoints } from "./llm-models/endpoints";
 
 // System Roles API
 export {

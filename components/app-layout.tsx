@@ -16,7 +16,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   MessageSquare,
-
   Users,
   Settings,
   Search,
@@ -26,6 +25,8 @@ import {
   Bot,
   Plug,
   Book,
+  CreditCard,
+  Coins,
 } from "lucide-react";
 import { useAuth } from "@/lib/stores/auth-store";
 import { useWorkspace } from "@/lib/stores/workspace-store";
@@ -33,7 +34,7 @@ import { workspacesApi, type WorkspaceWallet } from "@/lib/api";
 
 interface AppLayoutProps {
   children: React.ReactNode;
-  activeModule: "chat" | "team" | "chatbots" | "settings" | "plugins" | "knowledge";
+  activeModule: "chat" | "team" | "chatbots" | "settings" | "plugins" | "knowledge" | "billing" | "pricing";
 }
 
 export function AppLayout({ children, activeModule }: AppLayoutProps) {
@@ -100,9 +101,12 @@ export function AppLayout({ children, activeModule }: AppLayoutProps) {
     return null;
   }
 
+  const canViewBilling =
+    selectedWorkspace?.user_role === "Owner" ||
+    selectedWorkspace?.user_role === "Admin";
+
   const modules = [
     { id: "chat", label: "Chat", icon: MessageSquare, href: "/chat" },
-
     { id: "team", label: "Team", icon: Users, href: "/team" },
     {
       id: "chatbots",
@@ -117,16 +121,32 @@ export function AppLayout({ children, activeModule }: AppLayoutProps) {
       href: "/plugins",
     },
     {
-      id: "settings",
-      label: "Settings",
-      icon: Settings,
-      href: "/settings",
-    },
-    {
       id: "knowledge",
       label: "Knowledge",
       icon: Book,
       href: "/knowledge",
+    },
+    ...(canViewBilling
+      ? [
+          {
+            id: "billing" as const,
+            label: "Giao dịch",
+            icon: CreditCard,
+            href: "/billing",
+          },
+        ]
+      : []),
+    {
+      id: "pricing",
+      label: "Bảng giá",
+      icon: Coins,
+      href: "/pricing",
+    },
+    {
+      id: "settings",
+      label: "Settings",
+      icon: Settings,
+      href: "/settings",
     },
   ];
 

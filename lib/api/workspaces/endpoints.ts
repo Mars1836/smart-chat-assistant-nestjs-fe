@@ -12,6 +12,7 @@ export const workspacesEndpoints = {
   getChatbot: (id: string) => `${WORKSPACES_BASE}/${id}/chatbot`,
   wallet: (id: string) => `${WORKSPACES_BASE}/${id}/billing/wallet`,
   vietqr: (id: string) => `${WORKSPACES_BASE}/${id}/billing/vietqr`,
+  transactions: (id: string) => `${WORKSPACES_BASE}/${id}/billing/transactions`,
   inviteMember: (id: string) => `${WORKSPACES_BASE}/${id}/members/invite`,
   getMembers: (id: string) => `${WORKSPACES_BASE}/${id}/members`,
   updateMemberRole: (workspaceId: string, memberId: string) =>

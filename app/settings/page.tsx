@@ -12,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useWorkspace } from "@/lib/stores/workspace-store";
@@ -340,6 +341,17 @@ export default function WorkspaceSettingsPage() {
                   >
                     {wallet.status}
                   </span>
+                </p>
+              )}
+              {(selectedWorkspace?.user_role === "Owner" ||
+                selectedWorkspace?.user_role === "Admin") && (
+                <p className="mt-2">
+                  <Link
+                    href="/billing"
+                    className="text-sm text-primary hover:underline"
+                  >
+                    Xem lịch sử giao dịch & token
+                  </Link>
                 </p>
               )}
             </div>

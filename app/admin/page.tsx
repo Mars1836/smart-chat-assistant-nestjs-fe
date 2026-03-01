@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/stores/auth-store";
 import { AppLayout } from "@/components/app-layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Loader2, Users, CreditCard, Bot, ShieldCheck } from "lucide-react";
+import { Loader2, Users, CreditCard, Bot, ShieldCheck, Coins } from "lucide-react";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -72,6 +72,16 @@ export default function AdminDashboardPage() {
                 Giao dịch
               </CardTitle>
               <CardDescription>Danh sách & thống kê giao dịch thanh toán</CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => router.push("/admin/llm-models")}>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Coins className="w-5 h-5 text-primary" />
+                Models & Giá
+              </CardTitle>
+              <CardDescription>Quản lý model LLM và giá token (input/output per 1K)</CardDescription>
             </CardHeader>
           </Card>
 

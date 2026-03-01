@@ -56,6 +56,39 @@ export interface WorkspaceVietQRTopup {
   };
 }
 
+/** Thành viên liên quan giao dịch (usage = người dùng token, topup = người tạo phiên nạp) */
+export interface BillingTransactionUser {
+  id: string;
+  name: string;
+  email: string;
+}
+
+/** Giao dịch ví workspace: topup, usage, refund, adjustment */
+export interface BillingTransaction {
+  id: string;
+  workspace_id: string;
+  user_id: string | null;
+  user: BillingTransactionUser | null;
+  type: "topup" | "usage" | "refund" | "adjustment";
+  amount: string;
+  description: string | null;
+  llm_provider: string | null;
+  llm_model: string | null;
+  input_tokens: number | null;
+  output_tokens: number | null;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ListBillingTransactionsParams {
+  page?: number;
+  limit?: number;
+  sortBy?: "created_at" | "amount" | "type";
+  sortOrder?: "ASC" | "DESC";
+  type?: "topup" | "usage" | "refund" | "adjustment";
+}
+
 export interface PaginatedResponse<T> {
   data: T[];
   meta: {
@@ -220,6 +253,27 @@ export const workspacesApi = {
     const response = await client.get<WorkspaceWallet>(
       workspacesEndpoints.wallet(workspaceId)
     );
+    return response.data;
+  },
+
+  /**
+   * Get billing transactions (ví + lịch sử token). Chỉ Owner & Admin.
+   */
+  getBillingTransactions: async (
+    workspaceId: string,
+    params?: ListBillingTransactionsParams
+  ): Promise<PaginatedResponse<BillingTransaction>> => {
+    const response = await client.get<
+      PaginatedResponse<BillingTransaction>
+    >(workspacesEndpoints.transactions(workspaceId), {
+      params: {
+        page: params?.page ?? 1,
+        limit: params?.limit ?? 10,
+        sortBy: params?.sortBy ?? "created_at",
+        sortOrder: params?.sortOrder ?? "DESC",
+        ...(params?.type && { type: params.type }),
+      },
+    });
     return response.data;
   },
 
