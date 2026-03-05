@@ -49,7 +49,8 @@ export {
   type ChatCard,
   type UploadedImage,
   type ListChatbotsParams,
-  type WidgetConfig,
+   type WidgetConfig,
+   type WidgetConfigApiDto,
 } from "./chatbots/chatbots-api";
 export { chatbotsEndpoints } from "./chatbots/endpoints";
 
@@ -182,3 +183,18 @@ export {
   workspaceToolsEndpoints,
   chatbotToolsEndpoints,
 } from "./tools/endpoints";
+
+// Admin Workspaces Stats API
+export {
+  adminWorkspacesApi,
+  type WorkspaceChatbotStatsSummary,
+} from "./admin-workspaces/admin-workspaces-api";
+export { adminWorkspacesEndpoints } from "./admin-workspaces/endpoints";
+
+// Admin Knowledge Stats API
+export {
+  adminKnowledgeApi,
+  type KnowledgeStatsSummary,
+} from "./admin-knowledge/admin-knowledge-api";
+export { adminKnowledgeEndpoints } from "./admin-knowledge/endpoints";
+

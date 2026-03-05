@@ -64,8 +64,41 @@ export interface WidgetConfig {
   primaryColor: string;
   title: string;
   greeting: string;
+  /** Danh sách domain được phép nhúng (whitelist) */
   allowedOrigins: string[];
   lang: "vi" | "en";
+  /** Danh sách IP được phép, optional */
+  allowedIps?: string[];
+  /** Public API key cho widget (gửi qua X-Widget-Key), optional */
+  publicApiKey?: string | null;
+  /** Cửa sổ rate limit (giây), optional */
+  rateLimitWindowSec?: number | null;
+  /** Số request tối đa trong cửa sổ, optional */
+  rateLimitMaxRequests?: number | null;
+}
+
+/** Shape config dùng cho API widget-config (ui + security) */
+export interface WidgetUiConfig {
+  enabled?: boolean;
+  position?: "bottom-right" | "bottom-left";
+  primaryColor?: string;
+  title?: string;
+  greeting?: string;
+  lang?: "vi" | "en";
+}
+
+export interface WidgetSecurityConfig {
+  enabled?: boolean;
+  allowed_origins?: string[];
+  allowed_ips?: string[];
+  public_api_key?: string | null;
+  rate_limit_window_sec?: number | null;
+  rate_limit_max_requests?: number | null;
+}
+
+export interface WidgetConfigApiDto {
+  ui?: WidgetUiConfig;
+  security?: WidgetSecurityConfig;
 }
 
 export interface ChatDto {
@@ -203,6 +236,22 @@ export const chatbotsApi = {
     const response = await client.patch<Chatbot>(
       chatbotsEndpoints.update(workspaceId, id),
       data
+    );
+    return response.data;
+  },
+
+  /**
+   * PATCH /workspaces/:workspaceId/chatbots/:chatbotId/widget-config
+   * Cập nhật cấu hình widget (ui + security). Trả về Chatbot mới.
+   */
+  updateWidgetConfig: async (
+    workspaceId: string,
+    chatbotId: string,
+    body: WidgetConfigApiDto
+  ): Promise<Chatbot> => {
+    const response = await client.patch<Chatbot>(
+      chatbotsEndpoints.widgetConfig(workspaceId, chatbotId),
+      body
     );
     return response.data;
   },

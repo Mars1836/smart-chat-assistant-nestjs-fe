@@ -18,4 +18,6 @@ export const chatbotsEndpoints = {
   listModels: (workspaceId: string) => `${CHATBOTS_BASE(workspaceId)}/_/models`,
   testConnection: (workspaceId: string) =>
     `${CHATBOTS_BASE(workspaceId)}/_/test`,
+  widgetConfig: (workspaceId: string, id: string) =>
+    `${CHATBOTS_BASE(workspaceId)}/${id}/widget-config`,
 };

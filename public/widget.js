@@ -28,7 +28,9 @@
     apiBase: currentScript?.getAttribute('data-api-base') || '',
     position: currentScript?.getAttribute('data-position') || 'bottom-right',
     primaryColor: currentScript?.getAttribute('data-color') || '#4f46e5',
-    lang: currentScript?.getAttribute('data-lang') || 'vi'
+    lang: currentScript?.getAttribute('data-lang') || 'vi',
+    // Optional public API key for widget, used to send X-Widget-Key
+    publicApiKey: currentScript?.getAttribute('data-widget-key') || ''
   };
 
   // Translations
@@ -743,9 +745,8 @@
         message: message,
         visitorId: visitorId,
         metadata: {
-          page: window.location.pathname,
-          url: window.location.href,
-          referrer: document.referrer || null
+          pageUrl: window.location.href,
+          userAgent: window.navigator.userAgent || ''
         }
       };
       
@@ -754,16 +755,55 @@
         requestBody.conversation_id = conversationId;
       }
 
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+
+      // Include X-Widget-Key when configured
+      if (config.publicApiKey) {
+        headers['X-Widget-Key'] = config.publicApiKey;
+      }
+
       const response = await fetch(`${config.apiBase}/public/widget/chat`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers,
         body: JSON.stringify(requestBody)
       });
       
       if (!response.ok) {
-        throw new Error('API error');
+        // Handle important error cases explicitly for better UX
+        hideTyping();
+
+        if (response.status === 401) {
+          // Sai / thiếu API key
+          addMessage('Widget chưa được cấu hình đúng (API key). Vui lòng liên hệ quản trị viên.', 'bot');
+          return;
+        }
+
+        if (response.status === 403) {
+          // Không được phép dùng widget ở domain/IP này hoặc widget/chatbot bị tắt
+          addMessage('Chatbot tạm thời không khả dụng cho website này.', 'bot');
+          return;
+        }
+
+        if (response.status === 429) {
+          // Rate limit – thông báo và tạm khóa nút gửi
+          addMessage('Bạn đang nhắn quá nhanh, vui lòng thử lại sau.', 'bot');
+
+          input.disabled = true;
+          sendBtn.disabled = true;
+          setTimeout(() => {
+            input.disabled = false;
+            sendBtn.disabled = false;
+            input.focus();
+          }, 5000);
+
+          return;
+        }
+
+        // Các lỗi khác
+        addMessage(t.error, 'bot');
+        return;
       }
       
       const data = await response.json();

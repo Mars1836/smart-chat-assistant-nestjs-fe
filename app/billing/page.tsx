@@ -184,7 +184,7 @@ export default function BillingPage() {
                         <TableHead>Thời gian</TableHead>
                         <TableHead>Thành viên</TableHead>
                         <TableHead>Loại</TableHead>
-                        <TableHead className="text-right">Số tiền</TableHead>
+                        <TableHead className="text-right">Credit</TableHead>
                         <TableHead>Mô tả</TableHead>
                         <TableHead className="text-right">Input tokens</TableHead>
                         <TableHead className="text-right">Output tokens</TableHead>

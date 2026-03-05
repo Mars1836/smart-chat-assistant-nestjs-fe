@@ -13,9 +13,10 @@ export interface PaymentUser {
 
 export interface Payment {
   id: string;
+  user_id: string;
   amount: string;
   description: string | null;
-  provider: "zalopay" | "momo" | "bank";
+  provider: "sepay" | string; // SePay is the primary provider
   transaction_id: string;
   status: "pending" | "success" | "failed";
   created_at: string;
@@ -29,7 +30,7 @@ export interface ListPaymentsParams {
   sortBy?: "created_at" | "amount";
   sortOrder?: "ASC" | "DESC";
   status?: "pending" | "success" | "failed";
-  provider?: "zalopay" | "momo" | "bank";
+  provider?: string; // 'sepay' or others
   user_id?: string; // admin only
 }
 
@@ -37,8 +38,10 @@ export interface ListPaymentsParams {
 export interface PaymentStatsSummary {
   total_count: number;
   total_amount_success: string;
-  by_status: { pending: number; success: number; failed: number };
-  by_provider: { zalopay: number; momo: number; bank: number };
+  /** Partial: SePay only returns statuses that exist (primarily 'success') */
+  by_status: Partial<Record<"pending" | "success" | "failed", number>>;
+  /** Partial: currently 'sepay' only */
+  by_provider: Partial<Record<string, number>>;
   success_last_7_days: number;
   success_last_30_days: number;
 }

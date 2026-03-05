@@ -2,7 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useWorkspace } from "@/lib/stores/workspace-store";
-import { chatbotsApi, type Chatbot, type WidgetConfig } from "@/lib/api";
+import {
+  chatbotsApi,
+  type Chatbot,
+  type WidgetConfig,
+  type WidgetConfigApiDto,
+} from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
@@ -30,6 +35,10 @@ const DEFAULT_WIDGET_CONFIG: WidgetConfig = {
   title: "Hỗ trợ khách hàng",
   greeting: "",
   allowedOrigins: [],
+  allowedIps: [],
+  publicApiKey: "",
+  rateLimitWindowSec: 60,
+  rateLimitMaxRequests: 30,
   lang: "vi",
 };
 
@@ -74,6 +83,9 @@ export function WidgetConfigSettings({ chatbotId }: WidgetConfigSettingsProps) {
     script.setAttribute('data-position', config.position);
     script.setAttribute('data-color', config.primaryColor);
     script.setAttribute('data-lang', config.lang);
+    if (config.publicApiKey) {
+      script.setAttribute('data-widget-key', config.publicApiKey);
+    }
     document.body.appendChild(script);
 
     return () => {
@@ -112,9 +124,30 @@ export function WidgetConfigSettings({ chatbotId }: WidgetConfigSettingsProps) {
     if (!selectedWorkspace || !chatbot) return;
     try {
       setSaving(true);
-      await chatbotsApi.update(selectedWorkspace.id, chatbotId, {
-        widget_config: config,
-      });
+      const body: WidgetConfigApiDto = {
+        ui: {
+          enabled: config.enabled,
+          position: config.position,
+          primaryColor: config.primaryColor,
+          title: config.title,
+          greeting: config.greeting,
+          lang: config.lang,
+        },
+        security: {
+          enabled: config.enabled,
+          allowed_origins: config.allowedOrigins,
+          allowed_ips: config.allowedIps || [],
+          public_api_key: config.publicApiKey ?? null,
+          rate_limit_window_sec: config.rateLimitWindowSec ?? null,
+          rate_limit_max_requests: config.rateLimitMaxRequests ?? null,
+        },
+      };
+
+      await chatbotsApi.updateWidgetConfig(
+        selectedWorkspace.id,
+        chatbotId,
+        body
+      );
       toast.success("Lưu cấu hình widget thành công");
     } catch (error) {
       console.error(error);
@@ -132,6 +165,14 @@ export function WidgetConfigSettings({ chatbotId }: WidgetConfigSettingsProps) {
     setConfig({ ...config, allowedOrigins: origins });
   };
 
+  const handleIpsChange = (value: string) => {
+    const ips = value
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+    setConfig({ ...config, allowedIps: ips });
+  };
+
   const getScriptSnippet = () => {
     return `<script
   src="${widgetUrl}/widget.js"
@@ -140,7 +181,9 @@ export function WidgetConfigSettings({ chatbotId }: WidgetConfigSettingsProps) {
   data-api-base="${apiUrl}"
   data-position="${config.position}"
   data-color="${config.primaryColor}"
-  data-lang="${config.lang}"
+  data-lang="${config.lang}"${
+    config.publicApiKey ? `\n  data-widget-key="${config.publicApiKey}"` : ""
+  }
 ></script>`;
   };
 
@@ -161,6 +204,7 @@ function App() {
     script.setAttribute('data-position', '${config.position}');
     script.setAttribute('data-color', '${config.primaryColor}');
     script.setAttribute('data-lang', '${config.lang}');
+    ${config.publicApiKey ? "script.setAttribute('data-widget-key', '" + config.publicApiKey + "');" : ""}
     document.body.appendChild(script);
 
     return () => {
@@ -188,6 +232,7 @@ onMounted(() => {
   scriptEl.setAttribute('data-position', '${config.position}');
   scriptEl.setAttribute('data-color', '${config.primaryColor}');
   scriptEl.setAttribute('data-lang', '${config.lang}');
+  ${config.publicApiKey ? "scriptEl.setAttribute('data-widget-key', '" + config.publicApiKey + "');" : ""}
   document.body.appendChild(scriptEl);
 });
 
@@ -223,6 +268,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.scriptEl.setAttribute('data-position', '${config.position}');
     this.scriptEl.setAttribute('data-color', '${config.primaryColor}');
     this.scriptEl.setAttribute('data-lang', '${config.lang}');
+    ${config.publicApiKey ? "this.scriptEl.setAttribute('data-widget-key', '" + config.publicApiKey + "');" : ""}
     this.renderer.appendChild(this.document.body, this.scriptEl);
   }
 
@@ -410,6 +456,83 @@ export class AppComponent implements OnInit, OnDestroy {
               />
               <p className="text-xs text-muted-foreground">
                 Mỗi domain trên một dòng. Để trống cho phép tất cả domain.
+              </p>
+            </div>
+
+            {/* Allowed IPs */}
+            <div className="space-y-2">
+              <Label htmlFor="ips">Danh sách IP được phép gọi (tùy chọn)</Label>
+              <Textarea
+                id="ips"
+                value={(config.allowedIps || []).join("\n")}
+                onChange={(e) => handleIpsChange(e.target.value)}
+                placeholder="1.2.3.4&#10;5.6.7.8"
+                rows={3}
+              />
+              <p className="text-xs text-muted-foreground">
+                Mỗi IP trên một dòng. Để trống cho phép mọi IP (sẽ vẫn kiểm tra domain nếu bạn cấu hình).
+              </p>
+            </div>
+
+            {/* Public API key */}
+            <div className="space-y-2">
+              <Label htmlFor="api-key">Public API key cho widget (X-Widget-Key)</Label>
+              <Input
+                id="api-key"
+                value={config.publicApiKey || ""}
+                onChange={(e) =>
+                  setConfig({ ...config, publicApiKey: e.target.value })
+                }
+                placeholder="pub_widget_xxx"
+              />
+              <p className="text-xs text-muted-foreground">
+                Nếu thiết lập, widget sẽ gửi header <code>X-Widget-Key</code>. Backend sẽ kiểm tra key này.
+              </p>
+            </div>
+
+            {/* Rate limit (theo IP, backend mặc định) */}
+            <div className="space-y-3">
+              <Label>Rate limit (theo IP)</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="rl-window" className="text-xs">
+                    Cửa sổ (giây)
+                  </Label>
+                  <Input
+                    id="rl-window"
+                    type="number"
+                    min={1}
+                    value={config.rateLimitWindowSec ?? ""}
+                    onChange={(e) =>
+                      setConfig({
+                        ...config,
+                        rateLimitWindowSec:
+                          e.target.value === "" ? null : Number(e.target.value),
+                      })
+                    }
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="rl-max" className="text-xs">
+                    Số request tối đa
+                  </Label>
+                  <Input
+                    id="rl-max"
+                    type="number"
+                    min={1}
+                    value={config.rateLimitMaxRequests ?? ""}
+                    onChange={(e) =>
+                      setConfig({
+                        ...config,
+                        rateLimitMaxRequests:
+                          e.target.value === "" ? null : Number(e.target.value),
+                      })
+                    }
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Backend mặc định giới hạn theo IP (HTTP 429 khi vượt quá).
               </p>
             </div>
           </CardContent>

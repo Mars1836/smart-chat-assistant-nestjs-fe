@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/stores/auth-store";
 import { paymentsApi, type Payment } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -29,7 +30,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, ChevronLeft, BarChart3, Eye } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Loader2, ChevronLeft, BarChart3, Eye, Filter } from "lucide-react";
 
 function formatVnd(value: string | number): string {
   const n = typeof value === "string" ? parseFloat(value) : value;
@@ -41,22 +48,26 @@ function formatVnd(value: string | number): string {
   }).format(n);
 }
 
-function statusLabel(s: string): string {
-  const map: Record<string, string> = {
-    pending: "Chờ xử lý",
-    success: "Thành công",
-    failed: "Thất bại",
-  };
-  return map[s] ?? s;
-}
-
-function providerLabel(p: string): string {
-  const map: Record<string, string> = {
-    zalopay: "ZaloPay",
-    momo: "MoMo",
-    bank: "Ngân hàng",
-  };
-  return map[p] ?? p;
+function StatusBadge({ status }: { status: Payment["status"] }) {
+  if (status === "success") {
+    return (
+      <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/20">
+        Thành công
+      </Badge>
+    );
+  }
+  if (status === "pending") {
+    return (
+      <Badge className="bg-amber-500/15 text-amber-600 border-amber-500/30 hover:bg-amber-500/20">
+        Chờ xử lý
+      </Badge>
+    );
+  }
+  return (
+    <Badge className="bg-rose-500/15 text-rose-600 border-rose-500/30 hover:bg-rose-500/20">
+      Thất bại
+    </Badge>
+  );
 }
 
 export default function AdminPaymentsPage() {
@@ -73,10 +84,12 @@ export default function AdminPaymentsPage() {
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
   const [status, setStatus] = useState<string>("");
-  const [provider, setProvider] = useState<string>("");
+  // Default provider = sepay; "all" means no provider filter sent
+  const [provider, setProvider] = useState<string>("sepay");
   const [userId, setUserId] = useState("");
-  const [detailId, setDetailId] = useState<string | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
   const [detail, setDetail] = useState<Payment | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -100,7 +113,7 @@ export default function AdminPaymentsPage() {
         sortBy: "created_at",
         sortOrder: "DESC",
         ...(status && { status: status as Payment["status"] }),
-        ...(provider && { provider: provider as Payment["provider"] }),
+        ...(provider !== "all" && provider && { provider }),
         ...(userId.trim() && { user_id: userId.trim() }),
       })
       .then((res) => {
@@ -115,12 +128,14 @@ export default function AdminPaymentsPage() {
   }, [isSystemAdmin, page, limit, status, provider, userId]);
 
   const loadDetail = (id: string) => {
-    setDetailId(id);
+    setDetailOpen(true);
     setDetail(null);
+    setDetailLoading(true);
     paymentsApi
       .get(id)
-      .then(setDetail)
-      .catch(() => setDetail(null));
+      .then((d) => setDetail(d))
+      .catch(() => setDetail(null))
+      .finally(() => setDetailLoading(false));
   };
 
   if (authLoading || !isAuthenticated || !isSystemAdmin) {
@@ -134,6 +149,7 @@ export default function AdminPaymentsPage() {
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-6xl mx-auto space-y-6">
+        {/* Header */}
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" asChild>
@@ -146,60 +162,77 @@ export default function AdminPaymentsPage() {
                 Quản lý giao dịch
               </h1>
               <p className="text-muted-foreground text-sm">
-                Danh sách thanh toán (admin: có thể lọc theo user)
+                Giao dịch nạp tiền qua SePay – toàn hệ thống
               </p>
             </div>
           </div>
           <Button variant="outline" asChild>
-            <Link href="/admin/payments/stats" className="gap-2">
+            <Link href="/admin/payments/stats" className="gap-2 flex items-center">
               <BarChart3 className="w-4 h-4" />
               Thống kê
             </Link>
           </Button>
         </div>
 
+        {/* Table card */}
         <Card>
           <CardHeader>
-            <CardTitle>Danh sách giao dịch</CardTitle>
-            <CardDescription>
-              Lọc theo trạng thái, kênh; admin có thể nhập User ID để lọc
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Danh sách giao dịch</CardTitle>
+                <CardDescription>
+                  Lọc theo trạng thái; admin có thể nhập User ID để lọc theo người dùng cụ thể
+                </CardDescription>
+              </div>
+              <Filter className="w-4 h-4 text-muted-foreground" />
+            </div>
             <div className="flex flex-wrap items-center gap-2 pt-2">
-              <Select value={status || "all"} onValueChange={(v) => setStatus(v === "all" ? "" : v)}>
-                <SelectTrigger className="w-[140px]">
+              {/* Status filter */}
+              <Select
+                value={status || "all"}
+                onValueChange={(v) => { setPage(1); setStatus(v === "all" ? "" : v); }}
+              >
+                <SelectTrigger className="w-[155px]">
                   <SelectValue placeholder="Trạng thái" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tất cả trạng thái</SelectItem>
-                  <SelectItem value="pending">Chờ xử lý</SelectItem>
                   <SelectItem value="success">Thành công</SelectItem>
+                  <SelectItem value="pending">Chờ xử lý</SelectItem>
                   <SelectItem value="failed">Thất bại</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={provider || "all"} onValueChange={(v) => setProvider(v === "all" ? "" : v)}>
+
+              {/* Provider filter – SePay default */}
+              <Select
+                value={provider}
+                onValueChange={(v) => { setPage(1); setProvider(v); }}
+              >
                 <SelectTrigger className="w-[140px]">
                   <SelectValue placeholder="Kênh" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tất cả kênh</SelectItem>
-                  <SelectItem value="zalopay">ZaloPay</SelectItem>
-                  <SelectItem value="momo">MoMo</SelectItem>
-                  <SelectItem value="bank">Ngân hàng</SelectItem>
+                  <SelectItem value="sepay">SePay</SelectItem>
                 </SelectContent>
               </Select>
+
+              {/* User ID filter (admin only) */}
               <Input
-                placeholder="User ID (admin)"
+                placeholder="User ID (tùy chọn)"
                 className="w-[220px]"
                 value={userId}
                 onChange={(e) => setUserId(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && setPage(1)}
               />
+
               <Button
                 variant="secondary"
                 size="sm"
                 onClick={() => {
                   setPage(1);
                   setStatus("");
-                  setProvider("");
+                  setProvider("sepay");
                   setUserId("");
                 }}
               >
@@ -209,7 +242,7 @@ export default function AdminPaymentsPage() {
           </CardHeader>
           <CardContent>
             {loading ? (
-              <div className="flex justify-center py-8">
+              <div className="flex justify-center py-12">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
               </div>
             ) : (
@@ -217,56 +250,58 @@ export default function AdminPaymentsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Mã GD</TableHead>
+                      <TableHead>Mã GD (SePay)</TableHead>
+                      <TableHead>User</TableHead>
                       <TableHead>Số tiền</TableHead>
                       <TableHead>Mô tả</TableHead>
-                      <TableHead>Kênh</TableHead>
                       <TableHead>Trạng thái</TableHead>
-                      <TableHead>User</TableHead>
                       <TableHead>Ngày tạo</TableHead>
-                      <TableHead className="w-[80px]"></TableHead>
+                      <TableHead className="w-[60px]" />
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {payments.length === 0 ? (
                       <TableRow>
                         <TableCell
-                          colSpan={8}
-                          className="text-center text-muted-foreground py-8"
+                          colSpan={7}
+                          className="text-center text-muted-foreground py-12"
                         >
                           Không có giao dịch nào
                         </TableCell>
                       </TableRow>
                     ) : (
                       payments.map((p) => (
-                        <TableRow key={p.id}>
-                          <TableCell className="font-mono text-xs">
+                        <TableRow key={p.id} className="group">
+                          <TableCell className="font-mono text-xs text-muted-foreground">
                             {p.transaction_id || p.id.slice(0, 8)}
                           </TableCell>
-                          <TableCell className="font-medium">
-                            {formatVnd(p.amount)}
-                          </TableCell>
-                          <TableCell className="max-w-[160px] truncate text-muted-foreground">
-                            {p.description || "—"}
-                          </TableCell>
-                          <TableCell>{providerLabel(p.provider)}</TableCell>
-                          <TableCell>{statusLabel(p.status)}</TableCell>
                           <TableCell className="text-sm">
                             {p.user ? (
-                              <span title={p.user.email}>
-                                {p.user.name || p.user.email}
-                              </span>
+                              <div>
+                                <p className="font-medium">{p.user.name || "—"}</p>
+                                <p className="text-muted-foreground text-xs">{p.user.email}</p>
+                              </div>
                             ) : (
                               "—"
                             )}
                           </TableCell>
-                          <TableCell className="text-muted-foreground text-sm">
+                          <TableCell className="font-semibold">
+                            {formatVnd(p.amount)}
+                          </TableCell>
+                          <TableCell className="max-w-[200px] truncate text-muted-foreground text-sm">
+                            {p.description || "—"}
+                          </TableCell>
+                          <TableCell>
+                            <StatusBadge status={p.status} />
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
                             {new Date(p.created_at).toLocaleString("vi-VN")}
                           </TableCell>
                           <TableCell>
                             <Button
                               variant="ghost"
-                              size="sm"
+                              size="icon"
+                              className="opacity-0 group-hover:opacity-100 transition-opacity"
                               onClick={() => loadDetail(p.id)}
                             >
                               <Eye className="w-4 h-4" />
@@ -277,11 +312,13 @@ export default function AdminPaymentsPage() {
                     )}
                   </TableBody>
                 </Table>
+
+                {/* Pagination */}
                 {meta && meta.totalPages > 1 && (
                   <div className="flex items-center justify-between mt-4">
                     <p className="text-sm text-muted-foreground">
-                      Trang {meta.page} / {meta.totalPages} (tổng {meta.total}{" "}
-                      giao dịch)
+                      Trang {meta.page} / {meta.totalPages} &nbsp;·&nbsp; Tổng{" "}
+                      <strong>{meta.total}</strong> giao dịch
                     </p>
                     <div className="flex gap-2">
                       <Button
@@ -290,7 +327,7 @@ export default function AdminPaymentsPage() {
                         disabled={page <= 1}
                         onClick={() => setPage((p) => p - 1)}
                       >
-                        Trước
+                        ← Trước
                       </Button>
                       <Button
                         variant="outline"
@@ -298,7 +335,7 @@ export default function AdminPaymentsPage() {
                         disabled={page >= meta.totalPages}
                         onClick={() => setPage((p) => p + 1)}
                       >
-                        Sau
+                        Sau →
                       </Button>
                     </div>
                   </div>
@@ -307,57 +344,69 @@ export default function AdminPaymentsPage() {
             )}
           </CardContent>
         </Card>
-
-        {/* Detail popover / modal - simple dialog-style card below or we could use Dialog */}
-        {detailId && (
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Chi tiết giao dịch</CardTitle>
-              <Button variant="ghost" size="sm" onClick={() => setDetailId(null)}>
-                Đóng
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {detail ? (
-                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-                  <dt className="text-muted-foreground">ID</dt>
-                  <dd className="font-mono">{detail.id}</dd>
-                  <dt className="text-muted-foreground">Số tiền</dt>
-                  <dd>{formatVnd(detail.amount)}</dd>
-                  <dt className="text-muted-foreground">Mô tả</dt>
-                  <dd>{detail.description || "—"}</dd>
-                  <dt className="text-muted-foreground">Kênh</dt>
-                  <dd>{providerLabel(detail.provider)}</dd>
-                  <dt className="text-muted-foreground">Mã giao dịch</dt>
-                  <dd className="font-mono">{detail.transaction_id}</dd>
-                  <dt className="text-muted-foreground">Trạng thái</dt>
-                  <dd>{statusLabel(detail.status)}</dd>
-                  <dt className="text-muted-foreground">Tạo lúc</dt>
-                  <dd>
-                    {new Date(detail.created_at).toLocaleString("vi-VN")}
-                  </dd>
-                  <dt className="text-muted-foreground">Cập nhật</dt>
-                  <dd>
-                    {new Date(detail.updated_at).toLocaleString("vi-VN")}
-                  </dd>
-                  {detail.user && (
-                    <>
-                      <dt className="text-muted-foreground">User</dt>
-                      <dd>
-                        {detail.user.name} ({detail.user.email})
-                      </dd>
-                    </>
-                  )}
-                </dl>
-              ) : (
-                <div className="flex justify-center py-4">
-                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
       </div>
+
+      {/* Detail Dialog */}
+      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Chi tiết giao dịch</DialogTitle>
+          </DialogHeader>
+          {detailLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          ) : detail ? (
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+              <dt className="text-muted-foreground font-medium">ID</dt>
+              <dd className="font-mono text-xs break-all">{detail.id}</dd>
+
+              <dt className="text-muted-foreground font-medium">Mã GD (SePay)</dt>
+              <dd className="font-mono">{detail.transaction_id || "—"}</dd>
+
+              <dt className="text-muted-foreground font-medium">Số tiền</dt>
+              <dd className="font-semibold">{formatVnd(detail.amount)}</dd>
+
+              <dt className="text-muted-foreground font-medium">Mô tả</dt>
+              <dd>{detail.description || "—"}</dd>
+
+              <dt className="text-muted-foreground font-medium">Kênh</dt>
+              <dd>
+                <Badge variant="outline">
+                  {detail.provider?.toUpperCase() || "SEPAY"}
+                </Badge>
+              </dd>
+
+              <dt className="text-muted-foreground font-medium">Trạng thái</dt>
+              <dd>
+                <StatusBadge status={detail.status} />
+              </dd>
+
+              <dt className="text-muted-foreground font-medium">Tạo lúc</dt>
+              <dd>{new Date(detail.created_at).toLocaleString("vi-VN")}</dd>
+
+              <dt className="text-muted-foreground font-medium">Cập nhật</dt>
+              <dd>{new Date(detail.updated_at).toLocaleString("vi-VN")}</dd>
+
+              {detail.user && (
+                <>
+                  <dt className="text-muted-foreground font-medium">User</dt>
+                  <dd>
+                    <p className="font-medium">{detail.user.name || "—"}</p>
+                    <p className="text-muted-foreground text-xs">
+                      {detail.user.email}
+                    </p>
+                  </dd>
+                </>
+              )}
+            </dl>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-6">
+              Không tải được chi tiết giao dịch
+            </p>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

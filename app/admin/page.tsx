@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/stores/auth-store";
 import { AppLayout } from "@/components/app-layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Loader2, Users, CreditCard, Bot, ShieldCheck, Coins } from "lucide-react";
+import { Loader2, Users, CreditCard, Bot, ShieldCheck, Coins, BookOpen } from "lucide-react";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -55,15 +55,16 @@ export default function AdminDashboardPage() {
             </CardHeader>
           </Card>
 
-          <Card className="hover:shadow-md transition-shadow cursor-default">
+          <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => router.push("/admin/workspaces/stats")}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <Bot className="w-5 h-5 text-primary" />
                 Workspaces & Chatbots
               </CardTitle>
-              <CardDescription>Thống kê workspace, chatbot, usage</CardDescription>
+              <CardDescription>Thống kê workspace, chatbot mới tạo</CardDescription>
             </CardHeader>
           </Card>
+
 
           <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => router.push("/admin/payments")}>
             <CardHeader>
@@ -72,6 +73,16 @@ export default function AdminDashboardPage() {
                 Giao dịch
               </CardTitle>
               <CardDescription>Danh sách & thống kê giao dịch thanh toán</CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => router.push("/admin/knowledge/stats")}>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <BookOpen className="w-5 h-5 text-primary" />
+                Knowledge Base
+              </CardTitle>
+              <CardDescription>Tổng quan knowledge bases &amp; documents</CardDescription>
             </CardHeader>
           </Card>
 
