@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -104,9 +104,59 @@ export function WidgetConfigSettings({ chatbotId }: WidgetConfigSettingsProps) {
       const data = await chatbotsApi.get(selectedWorkspace.id, chatbotId);
       setChatbot(data);
       if (data.widget_config) {
-        setConfig(data.widget_config);
+        const raw = data.widget_config as any;
+        const ui = raw.ui || {};
+        const sec = raw.security || {};
+
+        // Ưu tiên dùng cấu trúc ui/security mới; fallback về field cũ nếu còn tồn tại
+        setConfig({
+          enabled:
+            ui.enabled ??
+            raw.enabled ??
+            DEFAULT_WIDGET_CONFIG.enabled,
+          position:
+            ui.position ??
+            raw.position ??
+            DEFAULT_WIDGET_CONFIG.position,
+          primaryColor:
+            ui.primaryColor ??
+            raw.primaryColor ??
+            DEFAULT_WIDGET_CONFIG.primaryColor,
+          title:
+            ui.title ??
+            raw.title ??
+            DEFAULT_WIDGET_CONFIG.title,
+          greeting:
+            (ui.greeting ??
+              raw.greeting ??
+              (data.greeting_message || DEFAULT_WIDGET_CONFIG.greeting)),
+          lang:
+            ui.lang ??
+            raw.lang ??
+            DEFAULT_WIDGET_CONFIG.lang,
+          allowedOrigins:
+            sec.allowed_origins ??
+            raw.allowedOrigins ??
+            DEFAULT_WIDGET_CONFIG.allowedOrigins,
+          allowedIps:
+            sec.allowed_ips ??
+            raw.allowedIps ??
+            DEFAULT_WIDGET_CONFIG.allowedIps,
+          publicApiKey:
+            sec.public_api_key ??
+            raw.publicApiKey ??
+            DEFAULT_WIDGET_CONFIG.publicApiKey,
+          rateLimitWindowSec:
+            sec.rate_limit_window_sec ??
+            raw.rateLimitWindowSec ??
+            DEFAULT_WIDGET_CONFIG.rateLimitWindowSec,
+          rateLimitMaxRequests:
+            sec.rate_limit_max_requests ??
+            raw.rateLimitMaxRequests ??
+            DEFAULT_WIDGET_CONFIG.rateLimitMaxRequests,
+        });
       } else {
-        // Use greeting_message as default if widget greeting is empty
+        // Use greeting_message as default nếu chưa có widget_config
         setConfig({
           ...DEFAULT_WIDGET_CONFIG,
           greeting: data.greeting_message || "",
@@ -279,6 +329,23 @@ export class AppComponent implements OnInit, OnDestroy {
     (window as any).__SmartChatWidget = false;
   }
 }`;
+  };
+
+  const getApiCurlSnippet = () => {
+    const endpoint = `${apiUrl}/public/widget/chat`;
+    const hasKey = !!config.publicApiKey;
+    const keyLine = hasKey
+      ? `  -H "X-Widget-Key: ${config.publicApiKey}" \\\n`
+      : "";
+
+    return `curl -X POST "${endpoint}" \\
+  -H "Content-Type: application/json" \\
+${keyLine}  -d '{
+    "chatbotId": "${chatbotId}",
+    "message": "Xin chào, cho tôi hỏi...",
+    "conversation_id": null,
+    "visitorId": "user-123"
+  }'`;
   };
 
   const getCurrentSnippet = () => {
@@ -638,6 +705,61 @@ export class AppComponent implements OnInit, OnDestroy {
                   Bật Preview để xem widget thực tế xuất hiện ở góc màn hình như khi nhúng vào website.
                 </p>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Public API integration guide for developers */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">API tích hợp chatbot vào website khác</CardTitle>
+              <CardDescription>
+                Chia sẻ thông tin dưới đây cho developer để gọi chatbot này từ hệ thống khác.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-1 text-sm">
+                <p className="font-medium">Endpoint public (không cần đăng nhập)</p>
+                <code className="px-2 py-1 rounded bg-muted text-xs block">
+                  POST {apiUrl}/public/widget/chat
+                </code>
+              </div>
+
+              <div className="space-y-2 text-sm">
+                <p className="font-medium">Thông tin tích hợp</p>
+                <ul className="text-xs text-muted-foreground space-y-1 list-disc pl-4">
+                  <li>
+                    <span className="font-medium text-foreground">Backend URL:</span>{" "}
+                    {apiUrl}
+                  </li>
+                  <li>
+                    <span className="font-medium text-foreground">Chatbot ID:</span>{" "}
+                    {chatbot?.id}
+                  </li>
+                  <li>
+                    <span className="font-medium text-foreground">Widget API Key:</span>{" "}
+                    {config.publicApiKey ? config.publicApiKey : "Chưa bật"}
+                  </li>
+                  <li>
+                    <span className="font-medium text-foreground">Allowed origins:</span>{" "}
+                    {config.allowedOrigins.length > 0
+                      ? config.allowedOrigins.join(", ")
+                      : "Không giới hạn (khuyến nghị nên cấu hình whitelist)"}
+                  </li>
+                </ul>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Ví dụ request (cURL)</p>
+                <pre className="bg-muted p-4 rounded-lg text-xs overflow-x-auto max-h-80">
+                  <code>{getApiCurlSnippet()}</code>
+                </pre>
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                Lưu ý: domain gọi API cần nằm trong <code>allowed_origins</code> của chatbot.
+                Nếu bật API key, bắt buộc gửi header <code>X-Widget-Key</code>. Nên lưu{" "}
+                <code>conversation_id</code> để giữ ngữ cảnh hội thoại cho từng visitor.
+              </p>
             </CardContent>
           </Card>
 

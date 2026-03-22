@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState, Suspense, use } from "react";
+import { useEffect, useMemo, useState, Suspense, use } from "react";
 import { AppLayout } from "@/components/app-layout";
 import { DocumentList } from "@/components/knowledge/document-list";
 import { DocumentUploadDialog } from "@/components/knowledge/document-upload-dialog";
@@ -28,6 +28,31 @@ function KnowledgeDetailContent({ id }: { id: string }) {
   const [loading, setLoading] = useState(true);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const router = useRouter();
+
+  const computedTotals = useMemo(() => {
+    const docs = knowledge?.documents;
+    if (!docs || docs.length === 0) {
+      return {
+        documents: knowledge?.document_count ?? 0,
+        chunks: knowledge?.total_chunks ?? 0,
+        sizeBytes: knowledge?.total_size ?? 0,
+      };
+    }
+
+    return {
+      documents: docs.length,
+      chunks: docs.reduce((sum, d) => sum + (d.chunk_count ?? 0), 0),
+      sizeBytes: docs.reduce((sum, d) => {
+        const n =
+          typeof d.size === "number"
+            ? d.size
+            : typeof d.size === "string"
+              ? Number(d.size)
+              : 0;
+        return sum + (Number.isFinite(n) ? n : 0);
+      }, 0),
+    };
+  }, [knowledge]);
 
   useEffect(() => {
     if (selectedWorkspace && id) {
@@ -152,15 +177,15 @@ function KnowledgeDetailContent({ id }: { id: string }) {
             <div className="flex gap-4 mt-6">
                 <div className="bg-muted/50 rounded-lg px-4 py-2 text-center">
                     <div className="text-sm font-medium text-muted-foreground">Documents</div>
-                    <div className="text-xl font-bold">{knowledge.document_count}</div>
+                    <div className="text-xl font-bold">{computedTotals.documents}</div>
                 </div>
                 <div className="bg-muted/50 rounded-lg px-4 py-2 text-center">
                     <div className="text-sm font-medium text-muted-foreground">Chunks</div>
-                    <div className="text-xl font-bold">{knowledge.total_chunks}</div>
+                    <div className="text-xl font-bold">{computedTotals.chunks}</div>
                 </div>
                 <div className="bg-muted/50 rounded-lg px-4 py-2 text-center">
                     <div className="text-sm font-medium text-muted-foreground">Size</div>
-                    <div className="text-xl font-bold">{(knowledge.total_size / 1024 / 1024).toFixed(1)} MB</div>
+                    <div className="text-xl font-bold">{(computedTotals.sizeBytes / 1024 / 1024).toFixed(1)} MB</div>
                 </div>
             </div>
           </div>
