@@ -52,8 +52,17 @@ export function WidgetConfigSettings({ chatbotId }: WidgetConfigSettingsProps) {
   const [showPreview, setShowPreview] = useState(false);
 
   // Environment URLs
-  const widgetUrl = process.env.NEXT_PUBLIC_WIDGET_URL || "http://localhost:3000";
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+  const browserOrigin =
+    typeof window !== "undefined" ? window.location.origin : "";
+  const widgetUrl =
+    process.env.NEXT_PUBLIC_WIDGET_URL ||
+    browserOrigin ||
+    "http://localhost:3000";
+  const apiUrl =
+    process.env.NEXT_PUBLIC_API_URL ||
+    (process.env.NODE_ENV === "development"
+      ? "http://localhost:4000"
+      : browserOrigin);
 
   useEffect(() => {
     if (selectedWorkspace && chatbotId) {
