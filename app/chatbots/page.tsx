@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { AppLayout } from "@/components/app-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DropdownMenu,
@@ -35,6 +36,7 @@ import { useWorkspace } from "@/lib/stores/workspace-store";
 import {
   chatbotsApi,
   type Chatbot,
+  type ConversationStarter,
   type CreateChatbotDto,
   type UpdateChatbotDto,
   type PaginatedResponse,
@@ -44,6 +46,11 @@ import { ChatbotChatDialog } from "@/components/chatbot-chat-dialog";
 import { ChatbotKnowledgeDialog } from "@/components/chatbot-knowledge-dialog"; // Added
 
 export default function ChatbotsPage() {
+  const createEmptyStarter = (): ConversationStarter => ({
+    label: "",
+    message: "",
+  });
+
   const router = useRouter(); // Need to add import { useRouter } from "next/navigation" if not present, but wait, it is imported in line 19? No.
   const { selectedWorkspace } = useWorkspace();
   const [chatbots, setChatbots] = useState<PaginatedResponse<Chatbot> | null>(
@@ -84,6 +91,7 @@ export default function ChatbotsPage() {
     llm_model: "gemini-2.0-flash-lite",
     temperature: 0.7,
     max_tokens: 1000,
+    conversation_starters: [],
   });
 
   useEffect(() => {
@@ -141,6 +149,7 @@ export default function ChatbotsPage() {
       llm_model: "gemini-2.0-flash-lite",
       temperature: 0.7,
       max_tokens: 1000,
+      conversation_starters: [],
     });
     setShowForm(true);
   };
@@ -159,8 +168,42 @@ export default function ChatbotsPage() {
       llm_model: chatbot.llm_model,
       temperature: chatbot.temperature,
       max_tokens: chatbot.max_tokens,
+      conversation_starters: chatbot.conversation_starters ?? [],
     });
     setShowForm(true);
+  };
+
+  const updateStarter = (
+    index: number,
+    field: keyof ConversationStarter,
+    value: string
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      conversation_starters: (prev.conversation_starters ?? []).map(
+        (starter, starterIndex) =>
+          starterIndex === index ? { ...starter, [field]: value } : starter
+      ),
+    }));
+  };
+
+  const addStarter = () => {
+    setFormData((prev) => ({
+      ...prev,
+      conversation_starters: [
+        ...(prev.conversation_starters ?? []),
+        createEmptyStarter(),
+      ],
+    }));
+  };
+
+  const removeStarter = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      conversation_starters: (prev.conversation_starters ?? []).filter(
+        (_, starterIndex) => starterIndex !== index
+      ),
+    }));
   };
 
   const handleOpenTools = (chatbot: Chatbot) => {
@@ -188,13 +231,23 @@ export default function ChatbotsPage() {
       setSubmitting(true);
       setError("");
 
+      const payload = {
+        ...formData,
+        conversation_starters: (formData.conversation_starters ?? [])
+          .map((starter) => ({
+            label: starter.label.trim(),
+            message: starter.message.trim(),
+          }))
+          .filter((starter) => starter.label && starter.message),
+      };
+
       const promise = editingChatbot
         ? chatbotsApi.update(
             selectedWorkspace.id,
             editingChatbot.id,
-            formData as UpdateChatbotDto
+            payload as UpdateChatbotDto
           )
-        : chatbotsApi.create(selectedWorkspace.id, formData);
+        : chatbotsApi.create(selectedWorkspace.id, payload);
 
       const result = await promise;
 
@@ -531,6 +584,93 @@ export default function ChatbotsPage() {
                       })
                     }
                   />
+                </div>
+
+                <div className="space-y-3 md:col-span-2">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <label className="text-sm font-medium">
+                        Conversation Starters
+                      </label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Hien thi cac nut goi y duoi loi chao khi chua co tin nhan.
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addStarter}
+                      className="gap-2"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Them starter
+                    </Button>
+                  </div>
+
+                  {(formData.conversation_starters ?? []).length > 0 ? (
+                    <div className="space-y-3">
+                      {(formData.conversation_starters ?? []).map(
+                        (starter, index) => (
+                          <div
+                            key={index}
+                            className="rounded-lg border border-border p-4 space-y-3"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <p className="text-sm font-medium">
+                                Starter {index + 1}
+                              </p>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeStarter(index)}
+                                className="text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">
+                                Label
+                              </label>
+                              <Input
+                                value={starter.label}
+                                onChange={(e) =>
+                                  updateStarter(index, "label", e.target.value)
+                                }
+                                placeholder="Gioi thieu"
+                                maxLength={100}
+                              />
+                            </div>
+
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">
+                                Message
+                              </label>
+                              <Textarea
+                                value={starter.message}
+                                onChange={(e) =>
+                                  updateStarter(
+                                    index,
+                                    "message",
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="Hay gioi thieu ngan gon ban co the ho tro nhung gi."
+                                rows={3}
+                              />
+                            </div>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
+                      Chua co starter nao. Neu de trong, backend se dung default starters cho chatbot moi.
+                    </div>
+                  )}
                 </div>
               </div>
 

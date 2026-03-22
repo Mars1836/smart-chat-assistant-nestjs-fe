@@ -40,6 +40,7 @@ export { workspacesEndpoints } from "./workspaces/endpoints";
 // Chatbots API
 export {
   chatbotsApi,
+  type ConversationStarter,
   type CreateChatbotDto,
   type UpdateChatbotDto,
   type Chatbot,
@@ -49,8 +50,9 @@ export {
   type ChatCard,
   type UploadedImage,
   type ListChatbotsParams,
-   type WidgetConfig,
-   type WidgetConfigApiDto,
+  type WidgetConfig,
+  type WidgetConfigApiDto,
+  type WidgetPublicConfig,
 } from "./chatbots/chatbots-api";
 export { chatbotsEndpoints } from "./chatbots/endpoints";
 
@@ -197,4 +199,3 @@ export {
   type KnowledgeStatsSummary,
 } from "./admin-knowledge/admin-knowledge-api";
 export { adminKnowledgeEndpoints } from "./admin-knowledge/endpoints";
-

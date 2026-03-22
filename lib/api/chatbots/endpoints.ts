@@ -20,4 +20,5 @@ export const chatbotsEndpoints = {
     `${CHATBOTS_BASE(workspaceId)}/_/test`,
   widgetConfig: (workspaceId: string, id: string) =>
     `${CHATBOTS_BASE(workspaceId)}/${id}/widget-config`,
+  publicWidgetConfig: (chatbotId: string) => `/public/widget/config/${chatbotId}`,
 };

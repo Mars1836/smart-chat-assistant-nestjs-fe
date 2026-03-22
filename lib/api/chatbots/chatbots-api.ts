@@ -6,6 +6,11 @@ import { chatbotsEndpoints } from "./endpoints";
 import type { PaginatedResponse } from "../workspaces/workspaces-api";
 
 // Types
+export interface ConversationStarter {
+  label: string;
+  message: string;
+}
+
 export interface CreateChatbotDto {
   name: string;
   language?: string;
@@ -18,6 +23,7 @@ export interface CreateChatbotDto {
   llm_model?: string;
   temperature?: number;
   max_tokens?: number;
+  conversation_starters?: ConversationStarter[];
 }
 
 export interface UpdateChatbotDto {
@@ -33,6 +39,7 @@ export interface UpdateChatbotDto {
   temperature?: number;
   max_tokens?: number;
   widget_config?: WidgetConfig;
+  conversation_starters?: ConversationStarter[];
 }
 
 export interface Chatbot {
@@ -56,6 +63,7 @@ export interface Chatbot {
   created_by?: any | null;
   workspace?: any;
   widget_config?: WidgetConfig | null;
+  conversation_starters?: ConversationStarter[];
 }
 
 export interface WidgetConfig {
@@ -99,6 +107,14 @@ export interface WidgetSecurityConfig {
 export interface WidgetConfigApiDto {
   ui?: WidgetUiConfig;
   security?: WidgetSecurityConfig;
+}
+
+export interface WidgetPublicConfig {
+  chatbot_id: string;
+  name: string;
+  greeting_message: string | null;
+  ui: Record<string, any> | null;
+  conversation_starters: ConversationStarter[];
 }
 
 export interface ChatDto {
@@ -252,6 +268,26 @@ export const chatbotsApi = {
     const response = await client.patch<Chatbot>(
       chatbotsEndpoints.widgetConfig(workspaceId, chatbotId),
       body
+    );
+    return response.data;
+  },
+
+  /**
+   * Get public widget config
+   */
+  getPublicWidgetConfig: async (
+    chatbotId: string,
+    publicApiKey?: string
+  ): Promise<WidgetPublicConfig> => {
+    const response = await client.get<WidgetPublicConfig>(
+      chatbotsEndpoints.publicWidgetConfig(chatbotId),
+      publicApiKey
+        ? {
+            headers: {
+              "X-Widget-Key": publicApiKey,
+            },
+          }
+        : undefined
     );
     return response.data;
   },

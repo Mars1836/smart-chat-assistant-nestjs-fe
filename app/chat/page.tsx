@@ -134,6 +134,15 @@ export default function ChatPage() {
     return `${API_BASE_URL}${url}`;
   };
 
+  const starterButtons = currentChatbot?.conversation_starters ?? [];
+  const hasConversationMessages = messages.some((message) => message.id !== "welcome");
+  const shouldShowStarterButtons =
+    !!currentChatbot &&
+    starterButtons.length > 0 &&
+    !hasConversationMessages &&
+    !loadingMessages &&
+    !sending;
+
   // Add images with validation
   const addImages = (files: File[]) => {
     const validFiles = files.filter((f) => {
@@ -380,9 +389,11 @@ export default function ChatPage() {
     }
   };
 
-  const handleSendMessage = async () => {
+  const handleSendMessage = async (starterMessage?: string) => {
+    const outgoingMessage = starterMessage ?? inputValue.trim();
+
     if (
-      (!inputValue.trim() && selectedImages.length === 0) ||
+      (!outgoingMessage && selectedImages.length === 0) ||
       !selectedWorkspaceId ||
       !currentChatbot ||
       sending
@@ -390,8 +401,9 @@ export default function ChatPage() {
       return;
 
     // Store current images for the message
-    const currentImages = [...selectedImages];
-    const currentPreviews = [...imagePreviews];
+    const useSelectedImages = typeof starterMessage !== "string";
+    const currentImages = useSelectedImages ? [...selectedImages] : [];
+    const currentPreviews = useSelectedImages ? [...imagePreviews] : [];
 
     // Create conversation if not exists
     let conversationId = selectedConversationId;
@@ -417,7 +429,7 @@ export default function ChatPage() {
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
-      content: inputValue,
+      content: outgoingMessage,
       timestamp: new Date(),
       userImages: currentPreviews.map((preview, index) => ({
         id: `temp-${index}`,
@@ -428,7 +440,7 @@ export default function ChatPage() {
       })),
     };
     setMessages((prev) => [...prev, userMessage]);
-    const messageText = inputValue;
+    const messageText = outgoingMessage;
     setInputValue("");
     setSelectedImages([]);
     setImagePreviews([]);
@@ -887,6 +899,31 @@ export default function ChatPage() {
                 </div>
               );
             })}
+
+            {shouldShowStarterButtons && (
+              <div className="flex justify-start">
+                <div className="max-w-md">
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Bat dau nhanh:
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {starterButtons.map((starter, index) => (
+                      <Button
+                        key={`${starter.label}-${index}`}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-auto whitespace-normal text-left"
+                        onClick={() => handleSendMessage(starter.message)}
+                        disabled={!currentChatbot?.enabled || sending}
+                      >
+                        {starter.label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Input Area */}
@@ -956,7 +993,7 @@ export default function ChatPage() {
                 disabled={sending || !currentChatbot?.enabled}
               />
               <Button
-                onClick={handleSendMessage}
+                onClick={() => handleSendMessage()}
                 className="bg-primary hover:bg-primary/90 gap-2"
                 disabled={
                   sending || (!inputValue.trim() && selectedImages.length === 0) || !currentChatbot?.enabled

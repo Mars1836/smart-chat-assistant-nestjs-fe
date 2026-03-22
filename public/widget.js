@@ -53,7 +53,9 @@
     }
   };
 
-  const t = i18n[config.lang] || i18n.vi;
+  function getTranslations() {
+    return i18n[config.lang] || i18n.vi;
+  }
 
   // Storage keys (unique per chatbot)
   const STORAGE_KEY_CONVERSATION = `scw_conversation_${config.chatbotId}`;
@@ -74,9 +76,15 @@
   let conversationId = localStorage.getItem(STORAGE_KEY_CONVERSATION) || null;
   let visitorId = getVisitorId();
   let messages = [];
+  let conversationStarters = [];
+  let widgetUi = {
+    title: null,
+    greeting: null
+  };
 
   // Create widget styles
-  const styles = `
+  function getStyles() {
+    return `
     .scw-widget-container * {
       box-sizing: border-box;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
@@ -389,6 +397,14 @@
       gap: 8px;
       flex-shrink: 0;
     }
+
+    .scw-starters-wrap {
+      padding: 0 16px 12px;
+      background: white;
+      display: flex;
+      justify-content: flex-end;
+      flex-shrink: 0;
+    }
     
     .scw-input {
       flex: 1;
@@ -433,6 +449,33 @@
       height: 20px;
       fill: white;
     }
+
+    .scw-starters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+      max-width: 85%;
+    }
+
+    .scw-starter-btn {
+      border: 1px solid ${config.primaryColor};
+      background: white;
+      color: #111827;
+      border-radius: 14px;
+      padding: 8px 12px;
+      font-size: 13px;
+      line-height: 1.3;
+      cursor: pointer;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+      transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+    }
+
+    .scw-starter-btn:hover {
+      background: #f8fafc;
+      border-color: ${config.primaryColor};
+      transform: translateY(-1px);
+    }
     
     @media (max-width: 480px) {
       .scw-chat-window {
@@ -451,12 +494,15 @@
       }
     }
   `;
+  }
 
   // Create widget HTML
   function createWidget() {
+    const t = getTranslations();
+
     // Add styles
     const styleEl = document.createElement('style');
-    styleEl.textContent = styles;
+    styleEl.textContent = getStyles();
     document.head.appendChild(styleEl);
 
     // Create container
@@ -471,7 +517,7 @@
       
       <div class="scw-chat-window" id="scw-chat-window">
         <div class="scw-chat-header">
-          <span>${t.title}</span>
+          <span>${widgetUi.title || t.title}</span>
           <button class="scw-close-btn" id="scw-close-btn" aria-label="Close chat">
             <svg viewBox="0 0 24 24">
               <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
@@ -516,7 +562,54 @@
     });
 
     // Add initial greeting
-    addMessage(t.greeting, 'bot');
+    addMessage(widgetUi.greeting || t.greeting, 'bot');
+    renderStarterButtons();
+  }
+
+  async function loadWidgetConfig() {
+    if (!config.chatbotId || !config.apiBase) return;
+
+    const headers = {};
+    if (config.publicApiKey) {
+      headers['X-Widget-Key'] = config.publicApiKey;
+    }
+
+    const response = await fetch(
+      `${config.apiBase}/public/widget/config/${config.chatbotId}`,
+      {
+        method: 'GET',
+        headers
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to load widget config: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const ui = data && data.ui ? data.ui : {};
+
+    if (ui.position === 'bottom-left' || ui.position === 'bottom-right') {
+      config.position = ui.position;
+    }
+    if (typeof ui.primaryColor === 'string' && ui.primaryColor.trim()) {
+      config.primaryColor = ui.primaryColor;
+    }
+    if (typeof ui.lang === 'string' && i18n[ui.lang]) {
+      config.lang = ui.lang;
+    }
+
+    widgetUi.title = ui.title || null;
+    widgetUi.greeting = data.greeting_message || null;
+    conversationStarters = Array.isArray(data.conversation_starters)
+      ? data.conversation_starters.filter((starter) =>
+          starter &&
+          typeof starter.label === 'string' &&
+          starter.label.trim() &&
+          typeof starter.message === 'string' &&
+          starter.message.trim()
+        )
+      : [];
   }
 
   // Toggle chat window
@@ -587,6 +680,54 @@
     return html;
   }
 
+  function clearStarterButtons() {
+    const startersEl = document.getElementById('scw-starters');
+    if (startersEl) {
+      startersEl.remove();
+    }
+  }
+
+  function shouldShowStarterButtons() {
+    const hasRealMessages = messages.some((message) => message.type === 'user');
+    return !hasRealMessages && messages.length <= 1 && conversationStarters.length > 0;
+  }
+
+  function renderStarterButtons() {
+    clearStarterButtons();
+
+    if (!shouldShowStarterButtons()) {
+      return;
+    }
+
+    const chatWindow = document.getElementById('scw-chat-window');
+    if (!chatWindow) return;
+
+    const startersWrapEl = document.createElement('div');
+    startersWrapEl.className = 'scw-starters-wrap';
+    startersWrapEl.id = 'scw-starters';
+
+    const startersEl = document.createElement('div');
+    startersEl.className = 'scw-starters';
+
+    conversationStarters.forEach((starter) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'scw-starter-btn';
+      button.textContent = starter.label;
+      button.addEventListener('click', () => sendMessage(starter.message));
+      startersEl.appendChild(button);
+    });
+
+    startersWrapEl.appendChild(startersEl);
+
+    const inputArea = document.querySelector('.scw-input-area');
+    if (inputArea && inputArea.parentNode === chatWindow) {
+      chatWindow.insertBefore(startersWrapEl, inputArea);
+    } else {
+      chatWindow.appendChild(startersWrapEl);
+    }
+  }
+
   // Add message to chat
   function addMessage(text, type) {
     const messagesEl = document.getElementById('scw-messages');
@@ -605,6 +746,9 @@
     messagesEl.scrollTop = messagesEl.scrollHeight;
     
     messages.push({ text, type });
+    if (type === 'user') {
+      clearStarterButtons();
+    }
   }
 
   // Add rich cards (products/articles/links) below a bot message
@@ -723,10 +867,13 @@
   }
 
   // Send message to API
-  async function sendMessage() {
+  async function sendMessage(messageOverride) {
+    const t = getTranslations();
     const input = document.getElementById('scw-input');
     const sendBtn = document.getElementById('scw-send-btn');
-    const message = input.value.trim();
+    const message = typeof messageOverride === 'string'
+      ? messageOverride.trim()
+      : input.value.trim();
     
     if (!message) return;
     
@@ -832,11 +979,21 @@
     input.focus();
   }
 
+  async function initWidget() {
+    try {
+      await loadWidgetConfig();
+    } catch (error) {
+      console.error('[Smart Chat Widget] Failed to load public config:', error);
+    }
+
+    createWidget();
+  }
+
   // Initialize when DOM is ready
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', createWidget);
+    document.addEventListener('DOMContentLoaded', initWidget);
   } else {
-    createWidget();
+    initWidget();
   }
 
 })();
