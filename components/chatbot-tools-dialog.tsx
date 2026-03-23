@@ -37,6 +37,11 @@ import {
   type PluginAction,
 } from "@/lib/api";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useWorkspace } from "@/lib/stores/workspace-store";
+import {
+  translateTemplate,
+  useLanguage,
+} from "@/components/providers/language-provider";
 
 interface ChatbotToolsDialogProps {
   open: boolean;
@@ -88,11 +93,14 @@ export function ChatbotToolsDialog({
   chatbotId,
   chatbotName,
 }: ChatbotToolsDialogProps) {
+  const { hasPermission } = useWorkspace();
+  const { t } = useLanguage();
   const [allTools, setAllTools] = useState<Plugin[]>([]);
   const [chatbotTools, setChatbotTools] = useState<ChatbotTool[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
   const [expandedTools, setExpandedTools] = useState<Record<string, boolean>>({});
+  const canManagePlugins = hasPermission("workspace.manage_plugins");
 
   useEffect(() => {
     if (open) {
@@ -114,7 +122,7 @@ export function ChatbotToolsDialog({
       setChatbotTools(enabledTools);
     } catch (err: any) {
       console.error("Error loading tools:", err);
-      toast.error("Khong the tai danh sach tools", {
+      toast.error(t("chatbotTools.loadFailed"), {
         description: err?.response?.data?.message || "Unknown error",
       });
     } finally {
@@ -144,6 +152,11 @@ export function ChatbotToolsDialog({
   };
 
   const handleToggleTool = async (tool: Plugin, enabled: boolean) => {
+    if (!canManagePlugins) {
+      toast.error(t("chatbotTools.permissionDenied"));
+      return;
+    }
+
     try {
       setUpdating(tool.id);
 
@@ -191,11 +204,14 @@ export function ChatbotToolsDialog({
       }
 
       toast.success(
-        enabled ? `Da bat ${tool.display_name}` : `Da tat ${tool.display_name}`
+        translateTemplate(
+          enabled ? t("chatbotTools.enabledSuccess") : t("chatbotTools.disabledSuccess"),
+          { name: tool.display_name }
+        )
       );
     } catch (err: any) {
       console.error("Error toggling tool:", err);
-      toast.error("Khong the cap nhat tool", {
+      toast.error(t("chatbotTools.updateFailed"), {
         description: err?.response?.data?.message || "Unknown error",
       });
     } finally {
@@ -204,6 +220,11 @@ export function ChatbotToolsDialog({
   };
 
   const handleToggleAction = async (tool: Plugin, actionId: string, enabled: boolean) => {
+    if (!canManagePlugins) {
+      toast.error(t("chatbotTools.permissionDenied"));
+      return;
+    }
+
     try {
       // Don't set updating for the whole tool to avoid disabling the switch
       // But maybe we should show some loading indicator for the action
@@ -240,7 +261,7 @@ export function ChatbotToolsDialog({
       
     } catch (err: any) {
       console.error("Error toggling action:", err);
-      toast.error("Khong the cap nhat action");
+      toast.error(t("chatbotTools.actionUpdateFailed"));
     }
   };
 
@@ -258,29 +279,38 @@ export function ChatbotToolsDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Plug className="w-5 h-5" />
-            Plugins / Tools
+            {t("chatbotTools.title")}
           </DialogTitle>
           <DialogDescription>
-            Quan ly cac plugin cho chatbot "{chatbotName}".{" "}
+            {translateTemplate(t("chatbotTools.description"), {
+              name: chatbotName,
+            })}{" "}
             {enabledCount > 0 && (
               <span className="text-primary font-medium">
-                ({enabledCount} plugin dang bat)
+                {translateTemplate(t("chatbotTools.enabledCount"), {
+                  count: enabledCount,
+                })}
               </span>
             )}
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto py-4 px-1">
-          {loading ? (
+          {!canManagePlugins ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <Plug className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p>{t("chatbotTools.priorityDenied")}</p>
+            </div>
+          ) : loading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div>
           ) : allTools.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <Plug className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>Chua co plugin nao duoc cau hinh.</p>
+              <p>{t("chatbotTools.empty")}</p>
               <p className="text-sm mt-2">
-                Lien he admin de them plugin moi.
+                {t("chatbotTools.emptyHint")}
               </p>
             </div>
           ) : (
@@ -353,14 +383,14 @@ export function ChatbotToolsDialog({
                           onCheckedChange={(checked) =>
                             handleToggleTool(tool, checked)
                           }
-                          disabled={isUpdating || !tool.is_enabled}
+                          disabled={isUpdating || !tool.is_enabled || !canManagePlugins}
                         />
                       </div>
                     </div>
 
                     <CollapsibleContent>
                       <div className="pl-20 pr-4 pb-4 space-y-2">
-                        <p className="text-xs font-medium text-muted-foreground mb-2">ACTIONS</p>
+                        <p className="text-xs font-medium text-muted-foreground mb-2">{t("chatbotTools.actions")}</p>
                         {tool.actions.map((action) => {
                           // Note: action.id might not exist in global tool response, use name as fallback
                           // The API spec says actions have IDs, but frontend code defined PluginAction with id.
@@ -374,7 +404,7 @@ export function ChatbotToolsDialog({
                                 id={`action-${tool.id}-${actionId}`}
                                 checked={actionEnabled}
                                 onCheckedChange={(checked) => handleToggleAction(tool, actionId, checked as boolean)}
-                                disabled={!isEnabled}
+                                disabled={!isEnabled || !canManagePlugins}
                               />
                               <div className="grid gap-1.5 leading-none">
                                 <label
@@ -401,10 +431,12 @@ export function ChatbotToolsDialog({
 
         <div className="flex justify-between items-center pt-4 border-t">
           <p className="text-sm text-muted-foreground">
-            {allTools.length} plugin co san
+            {translateTemplate(t("chatbotTools.availableCount"), {
+              count: allTools.length,
+            })}
           </p>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Dong
+            {t("chatbotTools.close")}
           </Button>
         </div>
       </DialogContent>

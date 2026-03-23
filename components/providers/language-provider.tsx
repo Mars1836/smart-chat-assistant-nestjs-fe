@@ -369,6 +369,21 @@ const dictionaries: Record<Locale, Dictionary> = {
       "Chưa có chatbot nào. Hãy tạo chatbot đầu tiên của bạn!",
     "chatbots.forbiddenCreate":
       "Bạn không có quyền tạo chatbot trong workspace này.",
+    "chatbotTools.loadFailed": "Không thể tải danh sách tools",
+    "chatbotTools.updateFailed": "Không thể cập nhật tool",
+    "chatbotTools.actionUpdateFailed": "Không thể cập nhật action",
+    "chatbotTools.enabledSuccess": "Đã bật {name}",
+    "chatbotTools.disabledSuccess": "Đã tắt {name}",
+    "chatbotTools.title": "Plugins / Tools",
+    "chatbotTools.description": "Quản lý các plugin cho chatbot \"{name}\".",
+    "chatbotTools.enabledCount": "({count} plugin đang bật)",
+    "chatbotTools.empty": "Chưa có plugin nào được cấu hình.",
+    "chatbotTools.emptyHint": "Liên hệ admin để thêm plugin mới.",
+    "chatbotTools.actions": "ACTIONS",
+    "chatbotTools.availableCount": "{count} plugin có sẵn",
+    "chatbotTools.close": "Đóng",
+    "chatbotTools.priorityDenied":
+      "Bạn không có quyền quản lý plugins/tools trong workspace này.",
   },
   en: {
     "common.loading": "Loading...",
@@ -728,8 +743,91 @@ const dictionaries: Record<Locale, Dictionary> = {
       "No chatbots yet. Create your first chatbot!",
     "chatbots.forbiddenCreate":
       "You do not have permission to create chatbots in this workspace.",
+    "chatbotTools.loadFailed": "Failed to load tools",
+    "chatbotTools.updateFailed": "Failed to update tool",
+    "chatbotTools.actionUpdateFailed": "Failed to update action",
+    "chatbotTools.enabledSuccess": "Enabled {name}",
+    "chatbotTools.disabledSuccess": "Disabled {name}",
+    "chatbotTools.title": "Plugins / Tools",
+    "chatbotTools.description": "Manage plugins for chatbot \"{name}\".",
+    "chatbotTools.enabledCount": "({count} plugins enabled)",
+    "chatbotTools.empty": "No plugins configured yet.",
+    "chatbotTools.emptyHint": "Contact an admin to add plugins.",
+    "chatbotTools.actions": "ACTIONS",
+    "chatbotTools.availableCount": "{count} plugins available",
+    "chatbotTools.close": "Close",
+    "chatbotTools.priorityDenied":
+      "You do not have permission to manage plugins/tools in this workspace.",
   },
 };
+
+Object.assign(dictionaries.vi, {
+  "common.close": "Đóng",
+  "common.edit": "Sửa",
+  "common.delete": "Xóa",
+  "chatbots.createSuccessDescription": "Chatbot \"{name}\" đã được tạo",
+  "chatbots.updateSuccessDescription": "Chatbot \"{name}\" đã được cập nhật",
+  "chatbots.deleteSuccessDescription": "Chatbot \"{name}\" đã được xóa",
+  "chatbots.starterNumber": "Starter {number}",
+  "chatbotTools.permissionDenied":
+    "Bạn không có quyền cập nhật plugin cho chatbot này.",
+  "toolActions.loadFailed": "Không thể tải danh sách actions",
+  "toolActions.permissionDenied":
+    "Bạn không có quyền quản lý actions của tool này.",
+  "toolActions.requiredFields": "Vui lòng điền đầy đủ thông tin bắt buộc",
+  "toolActions.invalidName":
+    "Mã định danh chỉ được chứa chữ thường, số và dấu gạch dưới",
+  "toolActions.invalidJson": "JSON không hợp lệ",
+  "toolActions.createSuccess": "Tạo action thành công",
+  "toolActions.createFailed": "Lỗi tạo action",
+  "toolActions.updateSuccess": "Cập nhật action thành công",
+  "toolActions.updateFailed": "Lỗi cập nhật action",
+  "toolActions.deleteConfirm": "Bạn có chắc muốn xóa action này?",
+  "toolActions.deleteSuccess": "Đã xóa action",
+  "toolActions.deleteFailed": "Lỗi xóa action",
+  "toolActions.title": "Quản lý Actions - {name}",
+  "toolActions.description": "Thêm và chỉnh sửa các actions cho tool này.",
+  "toolActions.update": "Cập nhật Action",
+  "toolActions.noDescription": "Không có mô tả",
+  "toolActions.empty": "Chưa có action nào.",
+  "toolActions.new": "Thêm Action Mới",
+  "toolActions.create": "Tạo Action",
+  "toolActions.add": "Thêm Action",
+});
+
+Object.assign(dictionaries.en, {
+  "common.close": "Close",
+  "common.edit": "Edit",
+  "common.delete": "Delete",
+  "chatbots.createSuccessDescription": "Chatbot \"{name}\" has been created",
+  "chatbots.updateSuccessDescription": "Chatbot \"{name}\" has been updated",
+  "chatbots.deleteSuccessDescription": "Chatbot \"{name}\" has been deleted",
+  "chatbots.starterNumber": "Starter {number}",
+  "chatbotTools.permissionDenied":
+    "You do not have permission to update plugins for this chatbot.",
+  "toolActions.loadFailed": "Failed to load actions",
+  "toolActions.permissionDenied":
+    "You do not have permission to manage actions for this tool.",
+  "toolActions.requiredFields": "Please fill in all required fields",
+  "toolActions.invalidName":
+    "Identifier can only contain lowercase letters, numbers, and underscores",
+  "toolActions.invalidJson": "Invalid JSON",
+  "toolActions.createSuccess": "Action created successfully",
+  "toolActions.createFailed": "Failed to create action",
+  "toolActions.updateSuccess": "Action updated successfully",
+  "toolActions.updateFailed": "Failed to update action",
+  "toolActions.deleteConfirm": "Are you sure you want to delete this action?",
+  "toolActions.deleteSuccess": "Action deleted",
+  "toolActions.deleteFailed": "Failed to delete action",
+  "toolActions.title": "Manage Actions - {name}",
+  "toolActions.description": "Add and edit actions for this tool.",
+  "toolActions.update": "Update Action",
+  "toolActions.noDescription": "No description",
+  "toolActions.empty": "No actions yet.",
+  "toolActions.new": "New Action",
+  "toolActions.create": "Create Action",
+  "toolActions.add": "Add Action",
+});
 
 type LanguageContextValue = {
   locale: Locale;

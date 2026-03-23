@@ -86,6 +86,7 @@ export default function ChatbotsPage() {
   const canUpdateChatbot = hasPermission("chatbot.update");
   const canDeleteChatbot = hasPermission("chatbot.delete");
   const canAssignKnowledge = hasPermission("knowledge.assign_chatbot");
+  const canManagePlugins = hasPermission("workspace.manage_plugins");
 
   // Form state
   const [formData, setFormData] = useState<CreateChatbotDto>({
@@ -265,9 +266,12 @@ export default function ChatbotsPage() {
           ? t("chatbots.updateSuccess")
           : t("chatbots.createSuccess"),
         {
-          description: `Chatbot "${formData.name}" đã được ${
-            editingChatbot ? "cập nhật" : "tạo"
-          }`,
+          description: translateTemplate(
+            editingChatbot
+              ? t("chatbots.updateSuccessDescription")
+              : t("chatbots.createSuccessDescription"),
+            { name: formData.name }
+          ),
         }
       );
 
@@ -320,7 +324,9 @@ export default function ChatbotsPage() {
       await chatbotsApi.delete(selectedWorkspace.id, chatbot.id);
       toast.success(t("chatbots.deleteSuccess"), {
         id: toastId,
-        description: `Chatbot "${chatbot.name}" đã được xóa`,
+        description: translateTemplate(t("chatbots.deleteSuccessDescription"), {
+          name: chatbot.name,
+        }),
       });
       await loadChatbots();
     } catch (err: any) {
@@ -640,7 +646,9 @@ export default function ChatbotsPage() {
                           >
                             <div className="flex items-start justify-between gap-3">
                               <p className="text-sm font-medium">
-                                Starter {index + 1}
+                                {translateTemplate(t("chatbots.starterNumber"), {
+                                  number: index + 1,
+                                })}
                               </p>
                               <Button
                                 type="button"
@@ -793,10 +801,12 @@ export default function ChatbotsPage() {
                               </DropdownMenuItem>
                             </>
                           )}
-                          <DropdownMenuItem onClick={() => handleOpenTools(chatbot)}>
-                            <Plug className="w-4 h-4 mr-2" />
-                            {t("chatbots.plugins")}
-                          </DropdownMenuItem>
+                          {canManagePlugins && (
+                            <DropdownMenuItem onClick={() => handleOpenTools(chatbot)}>
+                              <Plug className="w-4 h-4 mr-2" />
+                              {t("chatbots.plugins")}
+                            </DropdownMenuItem>
+                          )}
                           {canAssignKnowledge && (
                             <DropdownMenuItem onClick={() => handleOpenKnowledge(chatbot)}>
                               <Book className="w-4 h-4 mr-2" />
@@ -890,7 +900,7 @@ export default function ChatbotsPage() {
         )}
 
         {/* Tools Dialog */}
-        {selectedChatbotForTools && selectedWorkspace && (
+        {selectedChatbotForTools && selectedWorkspace && canManagePlugins && (
           <ChatbotToolsDialog
             open={toolsDialogOpen}
             onOpenChange={setToolsDialogOpen}

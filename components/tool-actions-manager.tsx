@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,23 +18,31 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import {
+  ChevronDown,
+  ChevronRight,
+  Edit2,
   Loader2,
   Plus,
   Trash2,
-  Zap,
-  Edit2,
-  ChevronDown,
-  ChevronRight,
   X,
+  Zap,
 } from "lucide-react";
 import {
   toolActionsApi,
-  type ToolAction,
-  type CreateToolActionDto,
   type CardConfig,
+  type CreateToolActionDto,
   type Plugin,
+  type ToolAction,
 } from "@/lib/api";
-import { ToolActionForm, type ActionFormState } from "@/components/tool-action-form";
+import {
+  translateTemplate,
+  useLanguage,
+} from "@/components/providers/language-provider";
+import { useWorkspace } from "@/lib/stores/workspace-store";
+import {
+  ToolActionForm,
+  type ActionFormState,
+} from "@/components/tool-action-form";
 
 interface ToolActionsManagerProps {
   open: boolean;
@@ -70,17 +78,16 @@ export function ToolActionsManager({
   tool,
   onActionsChanged,
 }: ToolActionsManagerProps) {
+  const { hasPermission } = useWorkspace();
+  const { t } = useLanguage();
   const [actions, setActions] = useState<ToolAction[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
-
-  // Collapsible states
   const [expandedActions, setExpandedActions] = useState<Record<string, boolean>>({});
-
-  // Render states
   const [showNewActionForm, setShowNewActionForm] = useState(false);
   const [editingActionId, setEditingActionId] = useState<string | null>(null);
+  const canManagePlugins = hasPermission("workspace.manage_plugins");
 
   useEffect(() => {
     if (open && tool) {
@@ -97,7 +104,7 @@ export function ToolActionsManager({
       setActions(data);
     } catch (err: any) {
       console.error("Error loading actions:", err);
-      toast.error("Không thể tải danh sách actions");
+      toast.error(t("toolActions.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -111,66 +118,89 @@ export function ToolActionsManager({
   };
 
   const mapActionToFormState = (action: ToolAction): ActionFormState => {
-    const cc = action.card_config;
+    const cardConfig = action.card_config;
+
     return {
       name: action.name,
       display_name: action.display_name,
       description: action.description,
-      method: (action.executor_config?.method as any) || "GET",
+      method: (action.executor_config?.method as ActionFormState["method"]) || "GET",
       endpoint: action.executor_config?.endpoint || "",
-      parameters_json: JSON.stringify(action.parameters || { type: "OBJECT", properties: {}, required: [] }, null, 2),
-      params_mapping_json: JSON.stringify(action.executor_config?.params || {}, null, 2),
+      parameters_json: JSON.stringify(
+        action.parameters || { type: "OBJECT", properties: {}, required: [] },
+        null,
+        2
+      ),
+      params_mapping_json: JSON.stringify(
+        action.executor_config?.params || {},
+        null,
+        2
+      ),
       sort_order: action.sort_order,
       is_enabled: action.is_enabled,
-      card_enabled: cc?.enabled !== false && !!cc,
-      card_list_path: cc?.list_path,
-      card_field_title: cc?.field_mapping?.title,
-      card_field_url: cc?.field_mapping?.url,
-      card_field_imageUrl: cc?.field_mapping?.imageUrl,
-      card_field_description: cc?.field_mapping?.description,
+      card_enabled: cardConfig?.enabled !== false && !!cardConfig,
+      card_list_path: cardConfig?.list_path,
+      card_field_title: cardConfig?.field_mapping?.title,
+      card_field_url: cardConfig?.field_mapping?.url,
+      card_field_imageUrl: cardConfig?.field_mapping?.imageUrl,
+      card_field_description: cardConfig?.field_mapping?.description,
     };
   };
 
-  const buildCardConfig = (form: ActionFormState): CardConfig | null | undefined => {
+  const buildCardConfig = (
+    form: ActionFormState
+  ): CardConfig | null | undefined => {
     if (!form.card_enabled) return null;
-    const fm: CardConfig["field_mapping"] = {};
-    if (form.card_field_title?.trim()) fm.title = form.card_field_title.trim();
-    if (form.card_field_url?.trim()) fm.url = form.card_field_url.trim();
-    if (form.card_field_imageUrl?.trim()) fm.imageUrl = form.card_field_imageUrl.trim();
-    if (form.card_field_description?.trim()) fm.description = form.card_field_description.trim();
+
+    const fieldMapping: CardConfig["field_mapping"] = {};
+    if (form.card_field_title?.trim()) fieldMapping.title = form.card_field_title.trim();
+    if (form.card_field_url?.trim()) fieldMapping.url = form.card_field_url.trim();
+    if (form.card_field_imageUrl?.trim()) {
+      fieldMapping.imageUrl = form.card_field_imageUrl.trim();
+    }
+    if (form.card_field_description?.trim()) {
+      fieldMapping.description = form.card_field_description.trim();
+    }
+
     return {
       enabled: true,
       list_path: form.card_list_path?.trim() || undefined,
-      field_mapping: Object.keys(fm).length > 0 ? fm : undefined,
+      field_mapping: Object.keys(fieldMapping).length > 0 ? fieldMapping : undefined,
     };
   };
 
   const handleCreateAction = async (formData: ActionFormState) => {
     if (!tool) return;
 
+    if (!canManagePlugins) {
+      toast.error(t("toolActions.permissionDenied"));
+      return;
+    }
+
     if (!formData.name || !formData.display_name || !formData.endpoint) {
-      toast.error("Vui lòng điền đầy đủ thông tin bắt buộc");
+      toast.error(t("toolActions.requiredFields"));
       return;
     }
 
-     // Validate name
     if (!/^[a-z0-9_]+$/.test(formData.name)) {
-      toast.error("Mã định danh chỉ được chứa chữ thường, số và dấu gạch dưới");
+      toast.error(t("toolActions.invalidName"));
       return;
     }
 
-    // Parse JSONs
-    let parameters, paramsMapping;
+    let parameters;
+    let paramsMapping;
+
     try {
       parameters = JSON.parse(formData.parameters_json);
       paramsMapping = JSON.parse(formData.params_mapping_json);
     } catch {
-      toast.error("JSON không hợp lệ");
+      toast.error(t("toolActions.invalidJson"));
       return;
     }
 
     try {
       setSaving(true);
+
       const payload: CreateToolActionDto = {
         name: formData.name,
         display_name: formData.display_name,
@@ -188,13 +218,13 @@ export function ToolActionsManager({
 
       await toolActionsApi.create(tool.id, payload);
 
-      toast.success("Tạo action thành công");
+      toast.success(t("toolActions.createSuccess"));
       setShowNewActionForm(false);
-      loadActions();
+      await loadActions();
       onActionsChanged?.();
     } catch (err: any) {
       console.error("Error creating action:", err);
-      toast.error("Lỗi tạo action", {
+      toast.error(t("toolActions.createFailed"), {
         description: err?.response?.data?.message || "Unknown error",
       });
     } finally {
@@ -202,16 +232,25 @@ export function ToolActionsManager({
     }
   };
 
-  const handleUpdateAction = async (actionId: string, formData: ActionFormState) => {
+  const handleUpdateAction = async (
+    actionId: string,
+    formData: ActionFormState
+  ) => {
     if (!tool) return;
 
-    // Parse JSONs
-    let parameters, paramsMapping;
+    if (!canManagePlugins) {
+      toast.error(t("toolActions.permissionDenied"));
+      return;
+    }
+
+    let parameters;
+    let paramsMapping;
+
     try {
       parameters = JSON.parse(formData.parameters_json);
       paramsMapping = JSON.parse(formData.params_mapping_json);
     } catch {
-      toast.error("JSON không hợp lệ");
+      toast.error(t("toolActions.invalidJson"));
       return;
     }
 
@@ -232,13 +271,13 @@ export function ToolActionsManager({
         card_config: buildCardConfig(formData),
       });
 
-      toast.success("Cập nhật action thành công");
+      toast.success(t("toolActions.updateSuccess"));
       setEditingActionId(null);
-      loadActions();
+      await loadActions();
       onActionsChanged?.();
     } catch (err: any) {
       console.error("Error updating action:", err);
-      toast.error("Lỗi cập nhật action", {
+      toast.error(t("toolActions.updateFailed"), {
         description: err?.response?.data?.message || "Unknown error",
       });
     } finally {
@@ -248,16 +287,22 @@ export function ToolActionsManager({
 
   const handleDeleteAction = async (actionId: string) => {
     if (!tool) return;
-    if (!window.confirm("Bạn có chắc muốn xoá action này?")) return;
+
+    if (!canManagePlugins) {
+      toast.error(t("toolActions.permissionDenied"));
+      return;
+    }
+
+    if (!window.confirm(t("toolActions.deleteConfirm"))) return;
 
     try {
       setDeleting(actionId);
       await toolActionsApi.delete(tool.id, actionId);
-      toast.success("Đã xoá action");
-      loadActions();
+      toast.success(t("toolActions.deleteSuccess"));
+      await loadActions();
       onActionsChanged?.();
-    } catch (err: any) {
-      toast.error("Lỗi xoá action");
+    } catch (err) {
+      toast.error(t("toolActions.deleteFailed"));
     } finally {
       setDeleting(null);
     }
@@ -271,27 +316,33 @@ export function ToolActionsManager({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Zap className="w-5 h-5" />
-            Quản lý Actions - {tool.display_name}
+            {translateTemplate(t("toolActions.title"), {
+              name: tool.display_name,
+            })}
           </DialogTitle>
-          <DialogDescription>
-            Thêm và chỉnh sửa các actions cho tool này.
-          </DialogDescription>
+          <DialogDescription>{t("toolActions.description")}</DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto py-4 space-y-4">
-          {loading ? (
+          {!canManagePlugins ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Zap className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p>{t("toolActions.permissionDenied")}</p>
+            </div>
+          ) : loading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div>
           ) : (
             <>
-              {/* List Actions */}
               {actions.length > 0 && (
                 <div className="space-y-2">
                   {actions.map((action) => (
                     <Collapsible
                       key={action.id}
-                      open={expandedActions[action.id] || editingActionId === action.id}
+                      open={
+                        expandedActions[action.id] || editingActionId === action.id
+                      }
                       onOpenChange={() => toggleExpanded(action.id)}
                       className="border rounded-lg"
                     >
@@ -307,24 +358,28 @@ export function ToolActionsManager({
                               {action.executor_config?.method || "GET"}
                             </Badge>
                             <span className="font-medium">{action.display_name}</span>
-                            <span className="text-xs text-muted-foreground">({action.name})</span>
+                            <span className="text-xs text-muted-foreground">
+                              ({action.name})
+                            </span>
                           </div>
                         </button>
                       </CollapsibleTrigger>
                       <CollapsibleContent>
                         {editingActionId === action.id ? (
                           <div className="p-4 border-t bg-muted/20">
-                             <ToolActionForm 
-                                initialData={mapActionToFormState(action)}
-                                onSubmit={(data) => handleUpdateAction(action.id, data)}
-                                onCancel={() => setEditingActionId(null)}
-                                isSubmitting={saving}
-                                submitLabel="Cập nhật Action"
-                             />
+                            <ToolActionForm
+                              initialData={mapActionToFormState(action)}
+                              onSubmit={(data) => handleUpdateAction(action.id, data)}
+                              onCancel={() => setEditingActionId(null)}
+                              isSubmitting={saving}
+                              submitLabel={t("toolActions.update")}
+                            />
                           </div>
                         ) : (
                           <div className="space-y-3 p-4 border-t">
-                            <p className="text-sm text-muted-foreground">{action.description || "Không có mô tả"}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {action.description || t("toolActions.noDescription")}
+                            </p>
                             <div className="flex items-center gap-2 text-xs font-mono bg-muted px-2 py-1 rounded w-fit">
                               <Badge variant="outline" className="font-mono">
                                 {action.executor_config?.method || "GET"}
@@ -337,12 +392,15 @@ export function ToolActionsManager({
                                 variant="outline"
                                 size="sm"
                                 onClick={() => {
-                                   setEditingActionId(action.id);
-                                   setExpandedActions((prev) => ({ ...prev, [action.id]: true }));
+                                  setEditingActionId(action.id);
+                                  setExpandedActions((prev) => ({
+                                    ...prev,
+                                    [action.id]: true,
+                                  }));
                                 }}
                               >
                                 <Edit2 className="w-4 h-4 mr-1" />
-                                Sửa
+                                {t("common.edit")}
                               </Button>
                               <Button
                                 type="button"
@@ -356,7 +414,7 @@ export function ToolActionsManager({
                                 ) : (
                                   <Trash2 className="w-4 h-4 mr-1" />
                                 )}
-                                Xoá
+                                {t("common.delete")}
                               </Button>
                             </div>
                           </div>
@@ -370,29 +428,32 @@ export function ToolActionsManager({
               {actions.length === 0 && !showNewActionForm && (
                 <div className="text-center py-8 text-muted-foreground">
                   <Zap className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>Chưa có action nào.</p>
+                  <p>{t("toolActions.empty")}</p>
                 </div>
               )}
 
-              {/* New Action Form */}
               {showNewActionForm && (
                 <div className="border rounded-lg p-4 bg-primary/5 border-primary/20">
-                   <div className="flex justify-between items-center mb-4">
-                      <h4 className="font-medium flex items-center gap-2">
-                        <Plus className="w-4 h-4" />
-                        Thêm Action Mới
-                      </h4>
-                      <Button variant="ghost" size="icon" onClick={() => setShowNewActionForm(false)}>
-                         <X className="w-4 h-4" />
-                      </Button>
-                   </div>
-                   <ToolActionForm 
-                      initialData={defaultActionForm}
-                      onSubmit={handleCreateAction}
-                      onCancel={() => setShowNewActionForm(false)}
-                      isSubmitting={saving}
-                      submitLabel="Tạo Action"
-                   />
+                  <div className="flex justify-between items-center mb-4">
+                    <h4 className="font-medium flex items-center gap-2">
+                      <Plus className="w-4 h-4" />
+                      {t("toolActions.new")}
+                    </h4>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setShowNewActionForm(false)}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  <ToolActionForm
+                    initialData={defaultActionForm}
+                    onSubmit={handleCreateAction}
+                    onCancel={() => setShowNewActionForm(false)}
+                    isSubmitting={saving}
+                    submitLabel={t("toolActions.create")}
+                  />
                 </div>
               )}
             </>
@@ -405,14 +466,14 @@ export function ToolActionsManager({
               type="button"
               variant="outline"
               onClick={() => setShowNewActionForm(true)}
-              disabled={loading}
+              disabled={loading || !canManagePlugins}
             >
               <Plus className="w-4 h-4 mr-2" />
-              Thêm Action
+              {t("toolActions.add")}
             </Button>
           )}
           <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
-            Đóng
+            {t("common.close")}
           </Button>
         </DialogFooter>
       </DialogContent>
