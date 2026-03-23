@@ -44,6 +44,10 @@ import {
 import { ChatbotToolsDialog } from "@/components/chatbot-tools-dialog";
 import { ChatbotChatDialog } from "@/components/chatbot-chat-dialog";
 import { ChatbotKnowledgeDialog } from "@/components/chatbot-knowledge-dialog"; // Added
+import {
+  translateTemplate,
+  useLanguage,
+} from "@/components/providers/language-provider";
 
 export default function ChatbotsPage() {
   const createEmptyStarter = (): ConversationStarter => ({
@@ -51,8 +55,9 @@ export default function ChatbotsPage() {
     message: "",
   });
 
-  const router = useRouter(); // Need to add import { useRouter } from "next/navigation" if not present, but wait, it is imported in line 19? No.
+  const router = useRouter();
   const { selectedWorkspace, hasPermission } = useWorkspace();
+  const { t } = useLanguage();
   const [chatbots, setChatbots] = useState<PaginatedResponse<Chatbot> | null>(
     null
   );
@@ -77,6 +82,9 @@ export default function ChatbotsPage() {
   // Chat dialog state
   const [chatDialogOpen, setChatDialogOpen] = useState(false);
   const [selectedChatbotForChat, setSelectedChatbotForChat] = useState<Chatbot | null>(null);
+  const canCreateChatbot = hasPermission("chatbot.create");
+  const canUpdateChatbot = hasPermission("chatbot.update");
+  const canDeleteChatbot = hasPermission("chatbot.delete");
   const canAssignKnowledge = hasPermission("knowledge.assign_chatbot");
 
   // Form state
@@ -224,7 +232,7 @@ export default function ChatbotsPage() {
 
   const handleSubmit = async () => {
     if (!selectedWorkspace || !formData.name.trim()) {
-      toast.error("Vui lòng nhập tên chatbot");
+      toast.error(t("chatbots.nameRequired"));
       return;
     }
 
@@ -254,8 +262,8 @@ export default function ChatbotsPage() {
 
       toast.success(
         editingChatbot
-          ? "Cập nhật chatbot thành công"
-          : "Tạo chatbot thành công",
+          ? t("chatbots.updateSuccess")
+          : t("chatbots.createSuccess"),
         {
           description: `Chatbot "${formData.name}" đã được ${
             editingChatbot ? "cập nhật" : "tạo"
@@ -270,8 +278,8 @@ export default function ChatbotsPage() {
       // If created new chatbot, open tools dialog to assign plugins
       if (!editingChatbot) {
          // Show success message with hint
-        toast.message("Tiếp theo: Gán Plugins", {
-          description: "Hãy chọn các công cụ/plugins cho chatbot này.",
+        toast.message(t("chatbots.plugins"), {
+          description: t("chatbots.nextPluginsDescription"),
         });
         
         setSelectedChatbotForTools(result);
@@ -282,9 +290,12 @@ export default function ChatbotsPage() {
         err?.response?.data?.message ||
         `Failed to ${editingChatbot ? "update" : "create"} chatbot`;
       setError(message);
-      toast.error(editingChatbot ? "Lỗi cập nhật chatbot" : "Lỗi tạo chatbot", {
-        description: message,
-      });
+      toast.error(
+        editingChatbot ? t("chatbots.updateError") : t("chatbots.createError"),
+        {
+          description: message,
+        }
+      );
       console.error("Error submitting form:", err);
     } finally {
       setSubmitting(false);
@@ -296,18 +307,18 @@ export default function ChatbotsPage() {
 
     // Confirm before deleting
     const confirmed = window.confirm(
-      `Bạn có chắc chắn muốn xóa chatbot "${chatbot.name}"? Hành động này không thể hoàn tác.`
+      translateTemplate(t("chatbots.deleteConfirm"), { name: chatbot.name })
     );
 
     if (!confirmed) return;
 
-    const toastId = toast.loading("Đang xóa chatbot...", {
+    const toastId = toast.loading(t("chatbots.deleting"), {
       id: `delete-${chatbot.id}`,
     });
 
     try {
       await chatbotsApi.delete(selectedWorkspace.id, chatbot.id);
-      toast.success("Xóa chatbot thành công", {
+      toast.success(t("chatbots.deleteSuccess"), {
         id: toastId,
         description: `Chatbot "${chatbot.name}" đã được xóa`,
       });
@@ -316,7 +327,7 @@ export default function ChatbotsPage() {
       const message =
         err?.response?.data?.message || "Failed to delete chatbot";
       setError(message);
-      toast.error("Lỗi xóa chatbot", {
+      toast.error(t("chatbots.deleteError"), {
         id: toastId,
         description: message,
       });
@@ -327,16 +338,16 @@ export default function ChatbotsPage() {
   const handleTestConnection = async () => {
     if (!selectedWorkspace) return;
 
-    const toastId = toast.loading("Đang kiểm tra kết nối...");
+    const toastId = toast.loading(t("chatbots.testConnectionLoading"));
 
     try {
       await chatbotsApi.testConnection(selectedWorkspace.id);
-      toast.success("Kiểm tra kết nối thành công", {
+      toast.success(t("chatbots.testConnectionSuccess"), {
         id: toastId,
-        description: "Kết nối với AI Studio hoạt động bình thường",
+        description: t("chatbots.testConnectionSuccessDescription"),
       });
     } catch (err: any) {
-      toast.error("Kiểm tra kết nối thất bại", {
+      toast.error(t("chatbots.testConnectionFailed"), {
         id: toastId,
         description: err?.response?.data?.message || "Unknown error",
       });
@@ -363,10 +374,10 @@ export default function ChatbotsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-foreground">
-              Quản lý Chatbot
+              {t("chatbots.title")}
             </h1>
             <p className="text-muted-foreground mt-1">
-              Tạo và quản lý các chatbot của bạn
+              {t("chatbots.description")}
             </p>
           </div>
           <div className="flex gap-2">
@@ -376,17 +387,25 @@ export default function ChatbotsPage() {
               className="gap-2"
             >
               <AlertCircle className="w-4 h-4" />
-              Test Connection
+              {t("chatbots.testConnection")}
             </Button>
-            <Button
-              onClick={handleCreate}
-              className="gap-2 bg-primary hover:bg-primary/90"
-            >
-              <Plus className="w-4 h-4" />
-              Tạo Chatbot
-            </Button>
+            {canCreateChatbot && (
+              <Button
+                onClick={handleCreate}
+                className="gap-2 bg-primary hover:bg-primary/90"
+              >
+                <Plus className="w-4 h-4" />
+                {t("chatbots.create")}
+              </Button>
+            )}
           </div>
         </div>
+
+        {!canCreateChatbot && (
+          <div className="bg-muted text-muted-foreground px-4 py-3 rounded-lg text-sm">
+            {t("chatbots.forbiddenCreate")}
+          </div>
+        )}
 
         {error && (
           <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg">
@@ -395,12 +414,14 @@ export default function ChatbotsPage() {
         )}
 
         {/* Create/Edit Form */}
-        {showForm && (
+        {showForm && canCreateChatbot && (
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>
-                  {editingChatbot ? "Chỉnh sửa Chatbot" : "Tạo Chatbot mới"}
+                  {editingChatbot
+                    ? t("chatbots.edit")
+                    : t("chatbots.createNew")}
                 </CardTitle>
                 <Button
                   variant="ghost"
@@ -419,20 +440,20 @@ export default function ChatbotsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">
-                    Tên chatbot <span className="text-destructive">*</span>
+                    {t("chatbots.name")} <span className="text-destructive">*</span>
                   </label>
                   <Input
                     value={formData.name}
                     onChange={(e) =>
                       setFormData({ ...formData, name: e.target.value })
                     }
-                    placeholder="My Assistant Bot"
+                    placeholder={t("chatbots.placeholder.name")}
                     maxLength={100}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Ngôn ngữ</label>
+                  <label className="text-sm font-medium">{t("chatbots.language")}</label>
                   <Input
                     value={formData.language}
                     onChange={(e) =>
@@ -443,18 +464,18 @@ export default function ChatbotsPage() {
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
-                  <label className="text-sm font-medium">Tính cách</label>
+                  <label className="text-sm font-medium">{t("chatbots.personality")}</label>
                   <Input
                     value={formData.personality}
                     onChange={(e) =>
                       setFormData({ ...formData, personality: e.target.value })
                     }
-                    placeholder="Bạn là trợ lý thông minh, nhiệt tình và chuyên nghiệp"
+                    placeholder={t("chatbots.placeholder.personality")}
                   />
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
-                  <label className="text-sm font-medium">Tin nhắn chào</label>
+                  <label className="text-sm font-medium">{t("chatbots.greeting")}</label>
                   <Input
                     value={formData.greeting_message}
                     onChange={(e) =>
@@ -463,13 +484,13 @@ export default function ChatbotsPage() {
                         greeting_message: e.target.value,
                       })
                     }
-                    placeholder="Xin chào! Tôi có thể giúp gì cho bạn?"
+                    placeholder={t("chatbots.placeholder.greeting")}
                   />
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
                   <label className="text-sm font-medium">
-                    Tin nhắn khi không hiểu
+                    {t("chatbots.fallback")}
                   </label>
                   <Input
                     value={formData.fallback_message}
@@ -479,13 +500,13 @@ export default function ChatbotsPage() {
                         fallback_message: e.target.value,
                       })
                     }
-                    placeholder="Xin lỗi, tôi chưa hiểu. Bạn có thể nói rõ hơn?"
+                    placeholder={t("chatbots.placeholder.fallback")}
                   />
                 </div>
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium">
-                    Confidence Threshold (0-1)
+                    {t("chatbots.threshold")}
                   </label>
                   <Input
                     type="number"
@@ -504,7 +525,7 @@ export default function ChatbotsPage() {
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium">
-                    Max Context Turns
+                    {t("chatbots.maxContextTurns")}
                   </label>
                   <Input
                     type="number"
@@ -520,7 +541,7 @@ export default function ChatbotsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">LLM Provider</label>
+                  <label className="text-sm font-medium">{t("chatbots.llmProvider")}</label>
                   <Input
                     value={formData.llm_provider}
                     onChange={(e) =>
@@ -531,7 +552,7 @@ export default function ChatbotsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">LLM Model</label>
+                  <label className="text-sm font-medium">{t("chatbots.llmModel")}</label>
                   <select
                     className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                     value={formData.llm_model}
@@ -555,7 +576,7 @@ export default function ChatbotsPage() {
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium">
-                    Temperature (0-1)
+                    {t("chatbots.temperature")}
                   </label>
                   <Input
                     type="number"
@@ -573,7 +594,7 @@ export default function ChatbotsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Max Tokens</label>
+                  <label className="text-sm font-medium">{t("chatbots.maxTokens")}</label>
                   <Input
                     type="number"
                     min="1"
@@ -591,10 +612,10 @@ export default function ChatbotsPage() {
                   <div className="flex items-center justify-between gap-4">
                     <div>
                       <label className="text-sm font-medium">
-                        Conversation Starters
+                        {t("chatbots.starters")}
                       </label>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Hien thi cac nut goi y duoi loi chao khi chua co tin nhan.
+                        {t("chatbots.startersDescription")}
                       </p>
                     </div>
                     <Button
@@ -605,7 +626,7 @@ export default function ChatbotsPage() {
                       className="gap-2"
                     >
                       <Plus className="w-4 h-4" />
-                      Them starter
+                      {t("chatbots.addStarter")}
                     </Button>
                   </div>
 
@@ -634,21 +655,21 @@ export default function ChatbotsPage() {
 
                             <div className="space-y-2">
                               <label className="text-sm font-medium">
-                                Label
+                                {t("chatbots.label")}
                               </label>
                               <Input
                                 value={starter.label}
                                 onChange={(e) =>
                                   updateStarter(index, "label", e.target.value)
                                 }
-                                placeholder="Gioi thieu"
+                                placeholder={t("chatbots.placeholder.label")}
                                 maxLength={100}
                               />
                             </div>
 
                             <div className="space-y-2">
                               <label className="text-sm font-medium">
-                                Message
+                                {t("chatbots.message")}
                               </label>
                               <Textarea
                                 value={starter.message}
@@ -659,7 +680,7 @@ export default function ChatbotsPage() {
                                     e.target.value
                                   )
                                 }
-                                placeholder="Hay gioi thieu ngan gon ban co the ho tro nhung gi."
+                                placeholder={t("chatbots.placeholder.message")}
                                 rows={3}
                               />
                             </div>
@@ -669,7 +690,7 @@ export default function ChatbotsPage() {
                     </div>
                   ) : (
                     <div className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
-                      Chua co starter nao. Neu de trong, backend se dung default starters cho chatbot moi.
+                      {t("chatbots.noStarters")}
                     </div>
                   )}
                 </div>
@@ -685,7 +706,7 @@ export default function ChatbotsPage() {
                   }}
                   disabled={submitting}
                 >
-                  Hủy
+                  {t("common.cancel")}
                 </Button>
                 <Button
                   onClick={handleSubmit}
@@ -695,12 +716,12 @@ export default function ChatbotsPage() {
                   {submitting ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      Đang xử lý...
+                      {t("common.loading")}
                     </>
                   ) : (
                     <>
                       <Check className="w-4 h-4" />
-                      {editingChatbot ? "Cập nhật" : "Tạo"}
+                      {editingChatbot ? t("common.save") : t("common.create")}
                     </>
                   )}
                 </Button>
@@ -713,7 +734,7 @@ export default function ChatbotsPage() {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Tìm kiếm chatbot..."
+            placeholder={t("chatbots.search")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10 h-10"
@@ -758,33 +779,39 @@ export default function ChatbotsPage() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => handleChat(chatbot)}>
                             <MessageSquare className="w-4 h-4 mr-2" />
-                            Chat thử
+                            {t("chatbots.tryChat")}
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => router.push(`/chatbots/${chatbot.id}/settings`)}>
-                            <Settings className="w-4 h-4 mr-2" />
-                            Cài đặt
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleEdit(chatbot)}>
-                            <Edit className="w-4 h-4 mr-2" />
-                            Chỉnh sửa
-                          </DropdownMenuItem>
+                          {canUpdateChatbot && (
+                            <>
+                              <DropdownMenuItem onClick={() => router.push(`/chatbots/${chatbot.id}/settings`)}>
+                                <Settings className="w-4 h-4 mr-2" />
+                                {t("chatbots.settings")}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleEdit(chatbot)}>
+                                <Edit className="w-4 h-4 mr-2" />
+                                {t("chatbots.edit")}
+                              </DropdownMenuItem>
+                            </>
+                          )}
                           <DropdownMenuItem onClick={() => handleOpenTools(chatbot)}>
                             <Plug className="w-4 h-4 mr-2" />
-                            Plugins
+                            {t("chatbots.plugins")}
                           </DropdownMenuItem>
                           {canAssignKnowledge && (
                             <DropdownMenuItem onClick={() => handleOpenKnowledge(chatbot)}>
                               <Book className="w-4 h-4 mr-2" />
-                              Knowledge
+                              {t("chatbots.knowledge")}
                             </DropdownMenuItem>
                           )}
-                          <DropdownMenuItem
-                            className="text-destructive"
-                            onClick={() => handleDelete(chatbot)}
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Xoa
-                          </DropdownMenuItem>
+                          {canDeleteChatbot && (
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={() => handleDelete(chatbot)}
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              {t("chatbots.delete")}
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -794,7 +821,7 @@ export default function ChatbotsPage() {
                       {chatbot.greeting_message && (
                         <div>
                           <p className="text-xs text-muted-foreground">
-                            Lời chào:
+                            {t("chatbots.greetingLabel")}
                           </p>
                           <p className="text-sm text-foreground line-clamp-2">
                             {chatbot.greeting_message}
@@ -802,10 +829,10 @@ export default function ChatbotsPage() {
                         </div>
                       )}
                       <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                        <span>Enabled: {chatbot.enabled ? "✓" : "✗"}</span>
+                        <span>{t("chatbots.enabled")}: {chatbot.enabled ? "✓" : "✗"}</span>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        Created:{" "}
+                        {t("chatbots.created")}:{" "}
                         {new Date(chatbot.created_at).toLocaleDateString()}
                       </p>
                     </div>
@@ -818,8 +845,11 @@ export default function ChatbotsPage() {
             {chatbots && chatbots.meta.totalPages > 1 && (
               <div className="flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">
-                  Hiển thị {chatbots.meta.page} / {chatbots.meta.totalPages}{" "}
-                  trang (Tổng: {chatbots.meta.total} chatbots)
+                  {translateTemplate(t("chatbots.pagination"), {
+                    page: chatbots.meta.page,
+                    totalPages: chatbots.meta.totalPages,
+                    total: chatbots.meta.total,
+                  })}
                 </p>
                 <div className="flex gap-2">
                   <Button
@@ -829,7 +859,7 @@ export default function ChatbotsPage() {
                     disabled={!chatbots.meta.hasPreviousPage}
                   >
                     <ChevronLeft className="w-4 h-4" />
-                    Trước
+                    {t("billing.previous")}
                   </Button>
                   <Button
                     variant="outline"
@@ -839,7 +869,7 @@ export default function ChatbotsPage() {
                     }
                     disabled={!chatbots.meta.hasNextPage}
                   >
-                    Sau
+                    {t("billing.next")}
                     <ChevronRight className="w-4 h-4" />
                   </Button>
                 </div>
@@ -852,8 +882,8 @@ export default function ChatbotsPage() {
               <Bot className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
               <p className="text-muted-foreground">
                 {searchQuery
-                  ? "Không tìm thấy chatbot nào"
-                  : "Chưa có chatbot nào. Hãy tạo chatbot đầu tiên của bạn!"}
+                  ? t("chatbots.emptySearch")
+                  : t("chatbots.emptyDefault")}
               </p>
             </CardContent>
           </Card>
