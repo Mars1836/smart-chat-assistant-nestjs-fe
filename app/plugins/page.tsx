@@ -147,7 +147,7 @@ function PluginsContent() {
 
   const [selectedPlugin, setSelectedPlugin] = useState<Plugin | null>(null);
 
-  const canManagePlugins = hasPermission("chatbot.update") || true;
+  const canManagePlugins = hasPermission("workspace.manage_plugins");
 
   // Handle OAuth callback success
   useEffect(() => {

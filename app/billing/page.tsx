@@ -58,7 +58,7 @@ function typeLabel(type: string, t: (key: string) => string): string {
 }
 
 export default function BillingPage() {
-  const { selectedWorkspace } = useWorkspace();
+  const { selectedWorkspace, hasPermission } = useWorkspace();
   const { t, locale } = useLanguage();
   const [transactions, setTransactions] = useState<BillingTransaction[]>([]);
   const [meta, setMeta] = useState<{
@@ -73,9 +73,7 @@ export default function BillingPage() {
   const [limit] = useState(20);
   const [typeFilter, setTypeFilter] = useState<string>("");
 
-  const canView =
-    selectedWorkspace?.user_role === "Owner" ||
-    selectedWorkspace?.user_role === "Admin";
+  const canView = hasPermission("billing.view_transactions");
 
   useEffect(() => {
     if (!selectedWorkspace) return;

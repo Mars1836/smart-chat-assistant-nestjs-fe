@@ -54,6 +54,7 @@ export function AppLayout({ children, activeModule }: AppLayoutProps) {
     selectWorkspace,
     loadWorkspaces,
     isLoading,
+    hasPermission,
   } = useWorkspace();
 
   const handleLogout = () => {
@@ -104,31 +105,57 @@ export function AppLayout({ children, activeModule }: AppLayoutProps) {
     return null;
   }
 
-  const canViewBilling =
-    selectedWorkspace?.user_role === "Owner" ||
-    selectedWorkspace?.user_role === "Admin";
+  const canViewTeam = hasPermission("member.view");
+  const canViewChatbots = hasPermission("chatbot.view");
+  const canManagePlugins = hasPermission("workspace.manage_plugins");
+  const canViewKnowledge = hasPermission("document.view");
+  const canViewBilling = hasPermission("billing.view_transactions");
+  const canViewSettings = hasPermission("workspace.view_settings");
 
   const modules = [
-    { id: "chat", label: t("layout.chat"), icon: MessageSquare, href: "/chat" },
-    { id: "team", label: t("layout.team"), icon: Users, href: "/team" },
-    {
-      id: "chatbots",
-      label: t("layout.chatbots"),
-      icon: Bot,
-      href: "/chatbots",
-    },
-    {
-      id: "plugins",
-      label: t("layout.plugins"),
-      icon: Plug,
-      href: "/plugins",
-    },
-    {
-      id: "knowledge",
-      label: t("layout.knowledge"),
-      icon: Book,
-      href: "/knowledge",
-    },
+    ...(hasPermission("chatbot.chat")
+      ? [
+          {
+            id: "chat" as const,
+            label: t("layout.chat"),
+            icon: MessageSquare,
+            href: "/chat",
+          },
+        ]
+      : []),
+    ...(canViewTeam
+      ? [{ id: "team" as const, label: t("layout.team"), icon: Users, href: "/team" }]
+      : []),
+    ...(canViewChatbots
+      ? [
+          {
+            id: "chatbots" as const,
+            label: t("layout.chatbots"),
+            icon: Bot,
+            href: "/chatbots",
+          },
+        ]
+      : []),
+    ...(canManagePlugins
+      ? [
+          {
+            id: "plugins" as const,
+            label: t("layout.plugins"),
+            icon: Plug,
+            href: "/plugins",
+          },
+        ]
+      : []),
+    ...(canViewKnowledge
+      ? [
+          {
+            id: "knowledge" as const,
+            label: t("layout.knowledge"),
+            icon: Book,
+            href: "/knowledge",
+          },
+        ]
+      : []),
     ...(canViewBilling
       ? [
           {
@@ -145,12 +172,16 @@ export function AppLayout({ children, activeModule }: AppLayoutProps) {
       icon: Coins,
       href: "/pricing",
     },
-    {
-      id: "settings",
-      label: t("layout.settings"),
-      icon: Settings,
-      href: "/settings",
-    },
+    ...(canViewSettings
+      ? [
+          {
+            id: "settings" as const,
+            label: t("layout.settings"),
+            icon: Settings,
+            href: "/settings",
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -321,10 +352,14 @@ export function AppLayout({ children, activeModule }: AppLayoutProps) {
                   {t("common.profile")}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => router.push("/settings")}>
-                  {t("layout.workspaceSettings")}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
+                {canViewSettings && (
+                  <>
+                    <DropdownMenuItem onClick={() => router.push("/settings")}>
+                      {t("layout.workspaceSettings")}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
                 <DropdownMenuItem onClick={handleLogout}>
                   {t("common.signOut")}
                 </DropdownMenuItem>

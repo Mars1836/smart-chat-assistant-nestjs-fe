@@ -31,6 +31,15 @@ function AcceptInviteContent() {
   
   const token = searchParams.get("token");
 
+  const redirectToWorkspaceChat = (id: string) => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("selectedWorkspaceId", id);
+      window.location.href = "/chat";
+      return;
+    }
+    router.push("/chat");
+  };
+
   // Check authentication and redirect if needed
   useEffect(() => {
     if (isAuthLoading) return;
@@ -70,9 +79,9 @@ function AcceptInviteContent() {
         setStatus("success");
         toast.success(`Chao mung ban den voi ${response.workspace.name}!`);
         
-        // Redirect to workspace after a short delay
+        // Persist selected workspace then redirect to the app's workspace-aware entrypoint
         setTimeout(() => {
-          router.push(`/workspace/${response.workspace.id}`);
+          redirectToWorkspaceChat(response.workspace.id);
         }, 1500);
       } catch (err: any) {
         const errorMessage = err?.response?.data?.message;
@@ -159,10 +168,10 @@ function AcceptInviteContent() {
                   Dang chuyen huong den workspace...
                 </div>
                 <Button
-                  onClick={() => router.push(`/workspace/${workspaceId}`)}
+                  onClick={() => redirectToWorkspaceChat(workspaceId)}
                   className="w-full h-10 bg-primary hover:bg-primary/90"
                 >
-                  Di den Workspace ngay
+                  Đi đến workspace ngay
                 </Button>
               </div>
             )}

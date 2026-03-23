@@ -25,6 +25,15 @@ function AcceptInvitationContent() {
   
   const token = searchParams.get("token");
 
+  const redirectToWorkspaceChat = (id: string) => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("selectedWorkspaceId", id);
+      window.location.href = "/chat";
+      return;
+    }
+    router.push("/chat");
+  };
+
   useEffect(() => {
     if (!token) {
       setError("Token khong hop le. Vui long kiem tra lai link trong email.");
@@ -47,9 +56,9 @@ function AcceptInvitationContent() {
       setWorkspaceName(response.workspace.name);
       toast.success(`Chao mung ban den voi ${response.workspace.name}!`);
       
-      // Redirect to workspace after 2 seconds
+      // Persist selected workspace then redirect to the app's workspace-aware entrypoint
       setTimeout(() => {
-        router.push(`/workspace/${response.workspace.id}`);
+        redirectToWorkspaceChat(response.workspace.id);
       }, 2000);
     } catch (err: any) {
       const errorMessage = err?.response?.data?.message;

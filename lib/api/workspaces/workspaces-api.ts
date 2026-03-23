@@ -174,6 +174,7 @@ export type PermissionName =
   | "workspace.update"
   | "workspace.delete"
   | "workspace.view_settings"
+  | "workspace.manage_plugins"
   | "member.invite"
   | "member.remove"
   | "member.update_role"
@@ -187,7 +188,8 @@ export type PermissionName =
   | "document.upload"
   | "document.update"
   | "document.delete"
-  | "document.view";
+  | "document.view"
+  | "billing.view_transactions";
 
 export interface UpdatePermissionDto {
   permission_name: PermissionName | string;

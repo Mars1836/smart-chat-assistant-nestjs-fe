@@ -139,6 +139,18 @@ export default function TeamPage() {
   const canInviteMembers = hasPermission("member.invite");
   const canRemoveMembers = hasPermission("member.remove");
   const canUpdateRole = hasPermission("member.update_role");
+  const canViewMembers = hasPermission("member.view");
+  const canViewSettings = hasPermission("workspace.view_settings");
+
+  if (!canViewMembers) {
+    return (
+      <AppLayout activeModule="team">
+        <div className="p-6 text-center text-muted-foreground">
+          {t("billing.forbidden")}
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout activeModule="team">
@@ -376,7 +388,7 @@ export default function TeamPage() {
         )}
 
         {/* Team Settings - Only for users with workspace.settings permission */}
-        {hasPermission("workspace.settings") && (
+        {canViewSettings && (
           <Card>
             <CardHeader>
               <CardTitle>{t("team.settings")}</CardTitle>

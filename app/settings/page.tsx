@@ -192,8 +192,10 @@ export default function WorkspaceSettingsPage() {
   };
 
   // Permission checks
-  const canUpdate = hasPermission("workspace.settings") || selectedWorkspace?.is_owner;
-  const canDelete = selectedWorkspace?.is_owner; // Typically only owner can delete
+  const canViewSettings = hasPermission("workspace.view_settings");
+  const canUpdate = hasPermission("workspace.update");
+  const canDelete = hasPermission("workspace.delete");
+  const canViewBilling = hasPermission("billing.view_transactions");
 
   const presetAmounts = [50000, 100000, 200000];
 
@@ -253,6 +255,16 @@ export default function WorkspaceSettingsPage() {
       <AppLayout activeModule="settings">
         <div className="p-6 text-center text-muted-foreground">
           {t("settings.noWorkspace")}
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (!canViewSettings) {
+    return (
+      <AppLayout activeModule="settings">
+        <div className="p-6 text-center text-muted-foreground">
+          {t("billing.forbidden")}
         </div>
       </AppLayout>
     );
@@ -350,8 +362,7 @@ export default function WorkspaceSettingsPage() {
                   </span>
                 </p>
               )}
-              {(selectedWorkspace?.user_role === "Owner" ||
-                selectedWorkspace?.user_role === "Admin") && (
+              {canViewBilling && (
                 <p className="mt-2">
                   <Link
                     href="/billing"
