@@ -108,7 +108,7 @@ export function AppLayout({ children, activeModule }: AppLayoutProps) {
   const canViewTeam = hasPermission("member.view");
   const canViewChatbots = hasPermission("chatbot.view");
   const canManagePlugins = hasPermission("workspace.manage_plugins");
-  const canViewKnowledge = hasPermission("document.view");
+  const canViewKnowledge = hasPermission("knowledge.view");
   const canViewBilling = hasPermission("billing.view_transactions");
   const canViewSettings = hasPermission("workspace.view_settings");
 

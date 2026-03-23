@@ -15,11 +15,12 @@ interface ChatbotKnowledgeSettingsProps {
 }
 
 export function ChatbotKnowledgeSettings({ chatbotId }: ChatbotKnowledgeSettingsProps) {
-  const { selectedWorkspace } = useWorkspace();
+  const { selectedWorkspace, hasPermission } = useWorkspace();
   const [allKnowledge, setAllKnowledge] = useState<KnowledgeBase[]>([]);
   const [chatbotKnowledge, setChatbotKnowledge] = useState<ChatbotKnowledge[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const canAssignKnowledge = hasPermission("knowledge.assign_chatbot");
 
   useEffect(() => {
     if (selectedWorkspace && chatbotId) {
@@ -99,6 +100,14 @@ export function ChatbotKnowledgeSettings({ chatbotId }: ChatbotKnowledgeSettings
 
   if (loading) {
     return <div className="flex justify-center py-8"><Loader2 className="animate-spin" /></div>;
+  }
+
+  if (!canAssignKnowledge) {
+    return (
+      <div className="rounded-lg border border-dashed border-border p-6 text-sm text-muted-foreground">
+        You do not have permission to manage chatbot knowledge assignments.
+      </div>
+    );
   }
 
   return (

@@ -25,6 +25,7 @@ import {
   type KnowledgeBase,
   type ChatbotKnowledge,
 } from "@/lib/api/knowledge";
+import { useWorkspace } from "@/lib/stores/workspace-store";
 
 interface ChatbotKnowledgeDialogProps {
   open: boolean;
@@ -41,10 +42,12 @@ export function ChatbotKnowledgeDialog({
   chatbotId,
   chatbotName,
 }: ChatbotKnowledgeDialogProps) {
+  const { hasPermission } = useWorkspace();
   const [allKnowledge, setAllKnowledge] = useState<KnowledgeBase[]>([]);
   const [chatbotKnowledge, setChatbotKnowledge] = useState<ChatbotKnowledge[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
+  const canAssignKnowledge = hasPermission("knowledge.assign_chatbot");
 
   useEffect(() => {
     if (open) {
@@ -178,7 +181,11 @@ export function ChatbotKnowledgeDialog({
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto py-4 px-1">
-          {loading ? (
+          {!canAssignKnowledge ? (
+            <div className="text-center py-12 text-muted-foreground">
+              Bạn không có quyền gắn knowledge cho chatbot này.
+            </div>
+          ) : loading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div>
@@ -242,6 +249,7 @@ export function ChatbotKnowledgeDialog({
                              className="w-16 h-8 text-xs"
                              defaultValue={connected.priority}
                              onBlur={(e) => handleUpdatePriority(kb.id, parseInt(e.target.value))}
+                             disabled={!canAssignKnowledge}
                           />
                         </div>
                       )}
@@ -255,7 +263,7 @@ export function ChatbotKnowledgeDialog({
                           onCheckedChange={(checked) =>
                             handleToggleKb(kb, checked)
                           }
-                          disabled={isUpdating}
+                          disabled={isUpdating || !canAssignKnowledge}
                         />
                       </div>
                     </div>

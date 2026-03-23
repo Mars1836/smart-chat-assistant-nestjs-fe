@@ -15,7 +15,7 @@ import { formatDistanceToNow } from "date-fns";
 
 interface KnowledgeCardProps {
   knowledge: KnowledgeBase;
-  onDelete: (id: string) => void;
+  onDelete?: (id: string) => void;
   onClick: (knowledge: KnowledgeBase) => void;
 }
 
@@ -66,17 +66,21 @@ export function KnowledgeCard({ knowledge, onDelete, onClick }: KnowledgeCardPro
                    <Settings className="w-4 h-4 mr-2" />
                    Settings
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                  className="text-destructive focus:text-destructive"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(knowledge.id);
-                  }}
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete
-                </DropdownMenuItem>
+                {onDelete && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      className="text-destructive focus:text-destructive"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete(knowledge.id);
+                      }}
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

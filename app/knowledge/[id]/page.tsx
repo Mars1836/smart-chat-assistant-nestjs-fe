@@ -23,11 +23,17 @@ interface PageProps {
 }
 
 function KnowledgeDetailContent({ id }: { id: string }) {
-  const { selectedWorkspace } = useWorkspace();
+  const { selectedWorkspace, hasPermission } = useWorkspace();
   const [knowledge, setKnowledge] = useState<KnowledgeBase & { documents?: Document[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const router = useRouter();
+  const canViewKnowledge = hasPermission("knowledge.view");
+  const canUpdateKnowledge = hasPermission("knowledge.update");
+  const canDeleteKnowledge = hasPermission("knowledge.delete");
+  const canUploadDocument = hasPermission("document.upload");
+  const canDeleteDocument = hasPermission("document.delete");
+  const canViewDocument = hasPermission("document.view");
 
   const computedTotals = useMemo(() => {
     const docs = knowledge?.documents;
@@ -141,6 +147,16 @@ function KnowledgeDetailContent({ id }: { id: string }) {
     );
   }
 
+  if (!canViewKnowledge) {
+    return (
+      <AppLayout activeModule="knowledge">
+        <div className="p-6 text-center text-muted-foreground">
+          You do not have permission to view this knowledge base.
+        </div>
+      </AppLayout>
+    );
+  }
+
   if (!knowledge) {
     return (
       <AppLayout activeModule="knowledge">
@@ -191,14 +207,18 @@ function KnowledgeDetailContent({ id }: { id: string }) {
           </div>
 
           <div className="flex gap-2">
-            <Button variant="outline" size="sm">
+            {canUpdateKnowledge && (
+              <Button variant="outline" size="sm">
                 <Edit className="w-4 h-4 mr-2" />
                 Edit
-            </Button>
-             <Button variant="destructive" size="sm">
+              </Button>
+            )}
+            {canDeleteKnowledge && (
+              <Button variant="destructive" size="sm">
                 <Trash2 className="w-4 h-4 mr-2" />
                 Delete
-            </Button>
+              </Button>
+            )}
           </div>
         </div>
 
@@ -206,16 +226,21 @@ function KnowledgeDetailContent({ id }: { id: string }) {
         <div className="pt-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold">Documents</h2>
-            <Button onClick={() => setUploadDialogOpen(true)}>
-              <Upload className="w-4 h-4 mr-2" />
-              Upload Document
-            </Button>
+            {canUploadDocument && (
+              <Button onClick={() => setUploadDialogOpen(true)}>
+                <Upload className="w-4 h-4 mr-2" />
+                Upload Document
+              </Button>
+            )}
           </div>
           
           <DocumentList
             documents={knowledge.documents || []}
+            canDelete={canDeleteDocument}
+            canView={canViewDocument}
             onDelete={handleDeleteDocument}
             onView={async (doc) => {
+               if (!canViewDocument) return;
                if (!selectedWorkspace) return;
                try {
                   const { token } = await knowledgeApi.getAccessToken(selectedWorkspace.id, doc.id);
@@ -231,11 +256,13 @@ function KnowledgeDetailContent({ id }: { id: string }) {
           />
         </div>
 
-        <DocumentUploadDialog
-          open={uploadDialogOpen}
-          onOpenChange={setUploadDialogOpen}
-          onUpload={handleUpload}
-        />
+        {canUploadDocument && (
+          <DocumentUploadDialog
+            open={uploadDialogOpen}
+            onOpenChange={setUploadDialogOpen}
+            onUpload={handleUpload}
+          />
+        )}
       </div>
     </AppLayout>
   );

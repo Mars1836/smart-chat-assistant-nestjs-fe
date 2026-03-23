@@ -15,13 +15,16 @@ import { useRouter } from "next/navigation";
 import { useLanguage } from "@/components/providers/language-provider";
 
 function KnowledgeContent() {
-  const { selectedWorkspace } = useWorkspace();
+  const { selectedWorkspace, hasPermission } = useWorkspace();
   const { t } = useLanguage();
   const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBase[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const router = useRouter();
+  const canViewKnowledge = hasPermission("knowledge.view");
+  const canCreateKnowledge = hasPermission("knowledge.create");
+  const canDeleteKnowledge = hasPermission("knowledge.delete");
 
   useEffect(() => {
     if (selectedWorkspace) {
@@ -84,6 +87,16 @@ function KnowledgeContent() {
     );
   }
 
+  if (!canViewKnowledge) {
+    return (
+      <AppLayout activeModule="knowledge">
+        <div className="p-6 text-center text-muted-foreground">
+          {t("billing.forbidden", "You do not have permission to view this page.")}
+        </div>
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout activeModule="knowledge">
       <div className="p-6 space-y-6">
@@ -92,10 +105,12 @@ function KnowledgeContent() {
             <h1 className="text-3xl font-bold text-foreground">{t("knowledge.title")}</h1>
             <p className="text-muted-foreground mt-1">{t("knowledge.description")}</p>
           </div>
-          <Button onClick={() => setCreateDialogOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            {t("knowledge.new")}
-          </Button>
+          {canCreateKnowledge && (
+            <Button onClick={() => setCreateDialogOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              {t("knowledge.new")}
+            </Button>
+          )}
         </div>
 
         <div className="relative">
@@ -113,10 +128,12 @@ function KnowledgeContent() {
             <Book className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium">{t("knowledge.emptyTitle")}</h3>
             <p className="text-muted-foreground mb-6">{t("knowledge.emptyDescription")}</p>
-            <Button onClick={() => setCreateDialogOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              {t("knowledge.create")}
-            </Button>
+            {canCreateKnowledge && (
+              <Button onClick={() => setCreateDialogOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                {t("knowledge.create")}
+              </Button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -124,18 +141,20 @@ function KnowledgeContent() {
               <KnowledgeCard
                 key={kb.id}
                 knowledge={kb}
-                onDelete={handleDelete}
+                onDelete={canDeleteKnowledge ? handleDelete : undefined}
                 onClick={(k) => router.push(`/knowledge/${k.id}`)}
               />
             ))}
           </div>
         )}
 
-        <CreateKnowledgeDialog
-          open={createDialogOpen}
-          onOpenChange={setCreateDialogOpen}
-          onSubmit={handleCreate}
-        />
+        {canCreateKnowledge && (
+          <CreateKnowledgeDialog
+            open={createDialogOpen}
+            onOpenChange={setCreateDialogOpen}
+            onSubmit={handleCreate}
+          />
+        )}
       </div>
     </AppLayout>
   );

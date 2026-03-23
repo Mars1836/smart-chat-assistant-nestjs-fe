@@ -17,6 +17,8 @@ interface DocumentListProps {
   documents: Document[];
   onDelete: (id: string) => void;
   onView: (doc: Document) => void;
+  canDelete?: boolean;
+  canView?: boolean;
 }
 
 const getFileIcon = (type: string) => {
@@ -62,7 +64,13 @@ const getStatusBadge = (status: Document["status"], progress: number) => {
   }
 };
 
-export function DocumentList({ documents, onDelete, onView }: DocumentListProps) {
+export function DocumentList({
+  documents,
+  onDelete,
+  onView,
+  canDelete = true,
+  canView = true,
+}: DocumentListProps) {
   if (documents.length === 0) {
     return (
       <div className="text-center py-12 border rounded-lg bg-muted/20 border-dashed">
@@ -117,17 +125,21 @@ export function DocumentList({ documents, onDelete, onView }: DocumentListProps)
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center justify-end gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => onView(doc)}>
-                      <Eye className="w-4 h-4 text-muted-foreground" />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10" 
-                      onClick={() => onDelete(doc.id)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    {canView && (
+                      <Button variant="ghost" size="icon" onClick={() => onView(doc)}>
+                        <Eye className="w-4 h-4 text-muted-foreground" />
+                      </Button>
+                    )}
+                    {canDelete && (
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10" 
+                        onClick={() => onDelete(doc.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>

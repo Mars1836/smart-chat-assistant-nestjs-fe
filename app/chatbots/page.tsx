@@ -52,7 +52,7 @@ export default function ChatbotsPage() {
   });
 
   const router = useRouter(); // Need to add import { useRouter } from "next/navigation" if not present, but wait, it is imported in line 19? No.
-  const { selectedWorkspace } = useWorkspace();
+  const { selectedWorkspace, hasPermission } = useWorkspace();
   const [chatbots, setChatbots] = useState<PaginatedResponse<Chatbot> | null>(
     null
   );
@@ -77,6 +77,7 @@ export default function ChatbotsPage() {
   // Chat dialog state
   const [chatDialogOpen, setChatDialogOpen] = useState(false);
   const [selectedChatbotForChat, setSelectedChatbotForChat] = useState<Chatbot | null>(null);
+  const canAssignKnowledge = hasPermission("knowledge.assign_chatbot");
 
   // Form state
   const [formData, setFormData] = useState<CreateChatbotDto>({
@@ -771,10 +772,12 @@ export default function ChatbotsPage() {
                             <Plug className="w-4 h-4 mr-2" />
                             Plugins
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleOpenKnowledge(chatbot)}>
-                            <Book className="w-4 h-4 mr-2" />
-                            Knowledge
-                          </DropdownMenuItem>
+                          {canAssignKnowledge && (
+                            <DropdownMenuItem onClick={() => handleOpenKnowledge(chatbot)}>
+                              <Book className="w-4 h-4 mr-2" />
+                              Knowledge
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem
                             className="text-destructive"
                             onClick={() => handleDelete(chatbot)}
