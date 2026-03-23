@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -13,6 +12,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Plus, Loader2, Check } from "lucide-react";
 import { useWorkspace } from "@/lib/stores/workspace-store";
+import { LanguageSwitcher } from "@/components/language-switcher";
+import { useLanguage } from "@/components/providers/language-provider";
 
 export default function WorkspaceSelectionPage() {
   const {
@@ -26,14 +27,7 @@ export default function WorkspaceSelectionPage() {
   const [newWorkspaceName, setNewWorkspaceName] = useState("");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
-  const router = useRouter();
-
-  // Remove auto redirect - let user choose workspace
-  // useEffect(() => {
-  //   if (!isLoading && selectedWorkspace) {
-  //     router.push("/chat");
-  //   }
-  // }, [selectedWorkspace, isLoading, router]);
+  const { t } = useLanguage();
 
   useEffect(() => {
     loadWorkspaces();
@@ -54,7 +48,7 @@ export default function WorkspaceSelectionPage() {
       });
       selectWorkspace(newWorkspace);
     } catch (err: any) {
-      setError(err?.response?.data?.message || "Failed to create workspace");
+      setError(err?.response?.data?.message || t("workspace.errorCreate"));
       console.error("Error creating workspace:", err);
     } finally {
       setCreating(false);
@@ -72,13 +66,15 @@ export default function WorkspaceSelectionPage() {
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-6xl mx-auto">
+        <div className="mb-4 flex justify-end">
+          <LanguageSwitcher />
+        </div>
+
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">
-            Select Workspace
+            {t("workspace.title")}
           </h1>
-          <p className="text-muted-foreground">
-            Choose a workspace to get started or create a new one
-          </p>
+          <p className="text-muted-foreground">{t("workspace.description")}</p>
         </div>
 
         {error && (
@@ -89,18 +85,18 @@ export default function WorkspaceSelectionPage() {
 
         {selectedWorkspace && (
           <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded-md text-sm">
-            Current workspace: <strong>{selectedWorkspace.name}</strong>
+            {t("workspace.current")}: <strong>{selectedWorkspace.name}</strong>
           </div>
         )}
 
         {showCreateForm && (
           <Card className="mb-6 border-primary/20 bg-primary/5">
             <CardHeader>
-              <CardTitle>Create new workspace</CardTitle>
+              <CardTitle>{t("workspace.createNew")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <Input
-                placeholder="Workspace name"
+                placeholder={t("workspace.namePlaceholder")}
                 value={newWorkspaceName}
                 onChange={(e) => setNewWorkspaceName(e.target.value)}
                 className="h-10"
@@ -114,10 +110,10 @@ export default function WorkspaceSelectionPage() {
                   {creating ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Creating...
+                      {t("workspace.creating")}
                     </>
                   ) : (
-                    "Create"
+                    t("workspace.create")
                   )}
                 </Button>
                 <Button
@@ -127,7 +123,7 @@ export default function WorkspaceSelectionPage() {
                     setNewWorkspaceName("");
                   }}
                 >
-                  Cancel
+                  {t("workspace.cancel")}
                 </Button>
               </div>
             </CardContent>
@@ -144,7 +140,7 @@ export default function WorkspaceSelectionPage() {
                 <div className="text-center">
                   <Plus className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
                   <p className="text-sm font-medium text-muted-foreground">
-                    Create workspace
+                    {t("layout.createWorkspace")}
                   </p>
                 </div>
               </CardContent>
@@ -163,7 +159,9 @@ export default function WorkspaceSelectionPage() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">
-                  {workspace.is_personal ? "Personal" : "Team workspace"}
+                  {workspace.is_personal
+                    ? t("workspace.personal")
+                    : t("workspace.team")}
                 </p>
               </CardContent>
               {selectedWorkspace?.id === workspace.id && (

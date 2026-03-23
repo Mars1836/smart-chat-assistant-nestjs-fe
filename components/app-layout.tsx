@@ -7,6 +7,8 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { LanguageSwitcher } from "@/components/language-switcher";
+import { useLanguage } from "@/components/providers/language-provider";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,6 +47,7 @@ export function AppLayout({ children, activeModule }: AppLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { logout } = useAuth();
+  const { t } = useLanguage();
   const {
     selectedWorkspace,
     workspaces,
@@ -106,23 +109,23 @@ export function AppLayout({ children, activeModule }: AppLayoutProps) {
     selectedWorkspace?.user_role === "Admin";
 
   const modules = [
-    { id: "chat", label: "Chat", icon: MessageSquare, href: "/chat" },
-    { id: "team", label: "Team", icon: Users, href: "/team" },
+    { id: "chat", label: t("layout.chat"), icon: MessageSquare, href: "/chat" },
+    { id: "team", label: t("layout.team"), icon: Users, href: "/team" },
     {
       id: "chatbots",
-      label: "Chatbots",
+      label: t("layout.chatbots"),
       icon: Bot,
       href: "/chatbots",
     },
     {
       id: "plugins",
-      label: "Plugins",
+      label: t("layout.plugins"),
       icon: Plug,
       href: "/plugins",
     },
     {
       id: "knowledge",
-      label: "Knowledge",
+      label: t("layout.knowledge"),
       icon: Book,
       href: "/knowledge",
     },
@@ -144,7 +147,7 @@ export function AppLayout({ children, activeModule }: AppLayoutProps) {
     },
     {
       id: "settings",
-      label: "Settings",
+      label: t("layout.settings"),
       icon: Settings,
       href: "/settings",
     },
@@ -223,7 +226,7 @@ export function AppLayout({ children, activeModule }: AppLayoutProps) {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder="Search..."
+                placeholder={t("common.search")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10 h-9 bg-muted border-0"
@@ -232,12 +235,14 @@ export function AppLayout({ children, activeModule }: AppLayoutProps) {
           </div>
 
           <div className="flex items-center gap-4">
+            <LanguageSwitcher compact />
+
             {/* Workspace Selector */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="gap-2">
                   <span className="text-sm font-medium">
-                    {selectedWorkspace?.name || "No workspace"}
+                    {selectedWorkspace?.name || t("layout.noWorkspace")}
                   </span>
                   <ChevronDown className="w-4 h-4" />
                 </Button>
@@ -270,7 +275,7 @@ export function AppLayout({ children, activeModule }: AppLayoutProps) {
                 <DropdownMenuItem
                   onClick={() => (window.location.href = "/workspace")}
                 >
-                  Create workspace
+                  {t("layout.createWorkspace")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -310,15 +315,15 @@ export function AppLayout({ children, activeModule }: AppLayoutProps) {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => router.push("/profile")}>
-                  Profile & Preferences
+                  {t("common.profile")}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => router.push("/settings")}>
-                  Workspace Settings
+                  {t("layout.workspaceSettings")}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout}>
-                  Sign out
+                  {t("common.signOut")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

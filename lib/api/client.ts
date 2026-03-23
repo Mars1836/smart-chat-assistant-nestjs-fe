@@ -14,6 +14,7 @@ import { API_BASE_URL } from "../constants";
 // Create axios instance with base configuration
 const client: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
+  withCredentials: true,
   timeout: 30000,
   headers: {
     "Content-Type": "application/json",
@@ -47,22 +48,21 @@ client.interceptors.response.use(
 
     // Handle 401 Unauthorized - Try to refresh token
     const isLoginRequest = originalRequest.url?.includes("/auth/login");
+    const isRefreshRequest = originalRequest.url?.includes("/auth/refresh");
     
-    if (error.response?.status === 401 && !originalRequest._retry && !isLoginRequest) {
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      !isLoginRequest &&
+      !isRefreshRequest
+    ) {
       originalRequest._retry = true;
 
       try {
-        const refreshToken = tokenStorage.getRefreshToken();
-        if (!refreshToken) {
-          tokenStorage.clearTokens();
-          window.location.href = "/";
-          return Promise.reject(error);
-        }
-
-        // Attempt to refresh the token
         const response = await axios.post(
           `${client.defaults.baseURL}/auth/refresh`,
-          { refreshToken }
+          {},
+          { withCredentials: true }
         );
 
         const { accessToken } = response.data;

@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/card";
 import { authApi, tokenStorage } from "@/lib/api";
 import { useAuthStore } from "@/lib/stores/auth-store";
+import { LanguageSwitcher } from "@/components/language-switcher";
+import { useLanguage } from "@/components/providers/language-provider";
 
 export default function SignupPage() {
   const [formData, setFormData] = useState({
@@ -27,6 +29,7 @@ export default function SignupPage() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const { t } = useLanguage();
   const setFromAuthResponse = useAuthStore((state) => state.setFromAuthResponse);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -38,15 +41,13 @@ export default function SignupPage() {
     e.preventDefault();
     setError("");
 
-    // Validate passwords match
     if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match");
+      setError(t("auth.signup.passwordMismatch"));
       return;
     }
 
-    // Validate password length
     if (formData.password.length < 8) {
-      setError("Password must be at least 8 characters long");
+      setError(t("auth.signup.passwordMin"));
       return;
     }
 
@@ -57,17 +58,12 @@ export default function SignupPage() {
         name: formData.name,
         email: formData.email,
         password: formData.password,
-        language: "vi", // Default language
+        language: "vi",
       });
 
-      // Store tokens
       tokenStorage.setAccessToken(response.accessToken);
-      tokenStorage.setRefreshToken(response.refreshToken);
-
-      // Cập nhật state từ response (có system_role) – không cần gọi GET /profile
       setFromAuthResponse(response);
 
-      // Chuyển trang theo system_role (giống login)
       if (response.system_role === "admin") {
         router.push("/admin");
       } else {
@@ -88,23 +84,25 @@ export default function SignupPage() {
   return (
     <div className="min-h-screen bg-linear-to-br from-primary/5 to-secondary/5 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
+        <div className="mb-4 flex justify-end">
+          <LanguageSwitcher />
+        </div>
+
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-primary mb-2">WorkMind</h1>
-          <p className="text-muted-foreground">Create your account</p>
+          <p className="text-muted-foreground">{t("auth.tagline")}</p>
         </div>
 
         <Card className="border-0 shadow-lg">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl">Get started</CardTitle>
-            <CardDescription>
-              Join WorkMind to manage tasks with AI
-            </CardDescription>
+            <CardTitle className="text-2xl">{t("auth.signup.title")}</CardTitle>
+            <CardDescription>{t("auth.signup.description")}</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSignup} className="space-y-4">
               <div className="space-y-2">
                 <label htmlFor="name" className="text-sm font-medium">
-                  Full name
+                  {t("auth.signup.fullName")}
                 </label>
                 <Input
                   id="name"
@@ -115,9 +113,10 @@ export default function SignupPage() {
                   className="h-10"
                 />
               </div>
+
               <div className="space-y-2">
                 <label htmlFor="email" className="text-sm font-medium">
-                  Email
+                  {t("auth.login.email")}
                 </label>
                 <Input
                   id="email"
@@ -129,60 +128,66 @@ export default function SignupPage() {
                   className="h-10"
                 />
               </div>
+
               <div className="space-y-2">
                 <label htmlFor="password" className="text-sm font-medium">
-                  Password
+                  {t("auth.login.password")}
                 </label>
                 <Input
                   id="password"
                   name="password"
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="********"
                   value={formData.password}
                   onChange={handleChange}
                   className="h-10"
                 />
               </div>
+
               <div className="space-y-2">
                 <label
                   htmlFor="confirmPassword"
                   className="text-sm font-medium"
                 >
-                  Confirm password
+                  {t("auth.signup.confirmPassword")}
                 </label>
                 <Input
                   id="confirmPassword"
                   name="confirmPassword"
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="********"
                   value={formData.confirmPassword}
                   onChange={handleChange}
                   className="h-10"
                 />
               </div>
+
               {error && (
                 <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md">
                   {error}
                 </div>
               )}
+
               <Button
                 type="submit"
                 className="w-full h-10 bg-primary hover:bg-primary/90"
                 disabled={isLoading}
               >
-                {isLoading ? "Creating account..." : "Create account"}
+                {isLoading
+                  ? t("auth.signup.submitting")
+                  : t("auth.signup.submit")}
               </Button>
             </form>
 
             <div className="mt-6 text-center text-sm">
               <span className="text-muted-foreground">
-                Already have an account?{" "}
+                {t("auth.signup.hasAccount")}{" "}
               </span>
               <Link
                 href="/"
                 className="text-primary hover:underline font-medium"
               >
-                Sign in
+                {t("auth.signup.signIn")}
               </Link>
             </div>
           </CardContent>

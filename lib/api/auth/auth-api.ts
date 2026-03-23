@@ -21,7 +21,7 @@ export interface RegisterRequest {
 /** Response từ login & register: token + thông tin user + system_role */
 export interface AuthResponse {
   accessToken: string;
-  refreshToken: string;
+  refreshToken?: string;
   id: string;
   name: string;
   email: string;
@@ -45,7 +45,7 @@ export interface ProfileResponse {
 }
 
 export interface RefreshDto {
-  refreshToken: string;
+  refreshToken?: string;
 }
 
 export interface RefreshResponse {
@@ -94,13 +94,8 @@ export const authApi = {
   /**
    * Refresh access token
    */
-  refreshToken: async (refreshToken: string): Promise<string> => {
-    const response = await client.post<RefreshResponse>(
-      authEndpoints.refresh(),
-      {
-        refreshToken,
-      }
-    );
+  refreshToken: async (): Promise<string> => {
+    const response = await client.post<RefreshResponse>(authEndpoints.refresh());
     return response.data.accessToken;
   },
 };

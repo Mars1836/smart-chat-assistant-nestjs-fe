@@ -48,13 +48,12 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   checkAuth: async () => {
-    const hasTokens = tokenStorage.hasTokens();
-    if (!hasTokens) {
-      set({ isAuthenticated: false, isLoading: false, isSystemAdmin: false, user: null });
-      return;
-    }
-
     try {
+      if (!tokenStorage.hasTokens()) {
+        const accessToken = await authApi.refreshToken();
+        tokenStorage.setAccessToken(accessToken);
+      }
+
       const profile: ProfileResponse = await authApi.getProfile();
       const isSystemAdmin = profile.system_role === "admin";
       set({
@@ -73,9 +72,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const response = await authApi.login({ email, password });
 
-      // Store tokens
       tokenStorage.setAccessToken(response.accessToken);
-      tokenStorage.setRefreshToken(response.refreshToken);
 
       // BE trả luôn id, name, email, system_role trong response login – không cần gọi GET /profile
       const isSystemAdmin = response.system_role === "admin";
@@ -104,6 +101,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: () => {
+    void authApi.logout().catch(() => undefined);
     tokenStorage.clearTokens();
     set({ isAuthenticated: false, isSystemAdmin: false, user: null });
 
