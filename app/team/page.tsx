@@ -23,9 +23,14 @@ import {
   workspaceInvitationsApi,
   type WorkspaceInvitation,
 } from "@/lib/api/workspace-invitations/workspace-invitations-api";
+import {
+  translateTemplate,
+  useLanguage,
+} from "@/components/providers/language-provider";
 
 export default function TeamPage() {
   const { selectedWorkspace, hasPermission } = useWorkspace();
+  const { t } = useLanguage();
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
   const [invitations, setInvitations] = useState<WorkspaceInvitation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -55,7 +60,7 @@ export default function TeamPage() {
       setInvitations(invitationsData);
     } catch (error) {
       console.error("Error loading team data:", error);
-      toast.error("Failed to load team data");
+      toast.error(t("team.loadFailed"));
     } finally {
       setIsLoading(false);
     }
@@ -63,7 +68,7 @@ export default function TeamPage() {
 
   const handleRemoveMember = async (id: string, name: string) => {
     // TODO: Implement remove member API
-    toast.error("Removing member is not implemented yet");
+    toast.error(t("team.removeNotImplemented"));
   };
 
   // Handle resend invitation
@@ -77,7 +82,7 @@ export default function TeamPage() {
       console.log("📤 Calling resend API...");
       const result = await workspaceInvitationsApi.resend(workspaceId, invitationId);
       console.log("✅ Resend successful:", result);
-      toast.success("Email đã được gửi lại");
+      toast.success(t("team.resendSuccess"));
     } catch (error: any) {
       console.error("❌ Failed to resend invitation:", error);
       console.error("Error details:", {
@@ -85,7 +90,7 @@ export default function TeamPage() {
         data: error.response?.data,
         message: error.message,
       });
-      toast.error(error.response?.data?.message || "Failed to resend invitation");
+      toast.error(error.response?.data?.message || t("team.resendFailed"));
     } finally {
       setProcessingIds((prev) => {
         const next = new Set(prev);
@@ -97,7 +102,7 @@ export default function TeamPage() {
 
   // Handle cancel invitation
   const handleCancelInvite = async (invitationId: string) => {
-    if (!confirm("Are you sure you want to cancel this invitation?")) {
+    if (!confirm(t("team.cancelInviteConfirm"))) {
       return;
     }
 
@@ -110,7 +115,7 @@ export default function TeamPage() {
       console.log("📤 Calling cancel API...");
       await workspaceInvitationsApi.cancel(workspaceId, invitationId);
       console.log("✅ Cancel successful");
-      toast.success("Đã hủy lời mời");
+      toast.success(t("team.cancelSuccess"));
       // Remove from list
       setInvitations((prev) => prev.filter((inv) => inv.id !== invitationId));
     } catch (error: any) {
@@ -120,7 +125,7 @@ export default function TeamPage() {
         data: error.response?.data,
         message: error.message,
       });
-      toast.error(error.response?.data?.message || "Failed to cancel invitation");
+      toast.error(error.response?.data?.message || t("team.cancelFailed"));
     } finally {
       setProcessingIds((prev) => {
         const next = new Set(prev);
@@ -139,14 +144,14 @@ export default function TeamPage() {
     <AppLayout activeModule="team">
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-foreground">Team</h1>
+          <h1 className="text-3xl font-bold text-foreground">{t("team.title")}</h1>
           {canInviteMembers && (
             <Button
               onClick={() => setShowInviteDialog(true)}
               className="gap-2 bg-primary hover:bg-primary/90"
             >
               <Plus className="w-4 h-4" />
-              Invite member
+              {t("team.inviteMember")}
             </Button>
           )}
         </div>
@@ -162,12 +167,12 @@ export default function TeamPage() {
         {!isLoading && (
           <Card>
             <CardHeader>
-              <CardTitle>Active Members ({members.length})</CardTitle>
+              <CardTitle>{translateTemplate(t("team.activeMembers"), { count: members.length })}</CardTitle>
             </CardHeader>
             <CardContent>
               {members.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  No active members found.
+                  {t("team.noMembers")}
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -203,7 +208,7 @@ export default function TeamPage() {
                           {member.workspaceRole.name}
                         </Badge>
                         <Badge className="bg-green-100 text-green-800">
-                          Active
+                          {t("team.active")}
                         </Badge>
                         
                         {(() => {
@@ -250,13 +255,13 @@ export default function TeamPage() {
                                        onClick={() => setEditingMember(member)}
                                      >
                                        <Shield className="w-4 h-4 mr-2" />
-                                       Change role
+                                       {t("team.changeRole")}
                                      </DropdownMenuItem>
                                      <DropdownMenuItem
                                        onClick={() => setManagingPermissionsMember(member)}
                                      >
                                        <Shield className="w-4 h-4 mr-2 text-blue-500" />
-                                       Manage permissions
+                                       {t("team.managePermissions")}
                                      </DropdownMenuItem>
                                    </>
                                  )}
@@ -266,7 +271,7 @@ export default function TeamPage() {
                                      onClick={() => handleRemoveMember(member.id, member.user.full_name)}
                                    >
                                      <Trash2 className="w-4 h-4 mr-2" />
-                                     Remove
+                                     {t("team.remove")}
                                    </DropdownMenuItem>
                                  )}
                                </DropdownMenuContent>
@@ -288,7 +293,7 @@ export default function TeamPage() {
         {!isLoading && invitations.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle>Pending Invitations ({invitations.length})</CardTitle>
+              <CardTitle>{translateTemplate(t("team.pendingInvitations"), { count: invitations.length })}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
@@ -312,7 +317,9 @@ export default function TeamPage() {
                             {invitation.email}
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            Invited by {invitation.invitedByUser.full_name}
+                            {translateTemplate(t("team.invitedBy"), {
+                              name: invitation.invitedByUser.full_name,
+                            })}
                           </p>
                         </div>
                       </div>
@@ -322,7 +329,7 @@ export default function TeamPage() {
                           {invitation.workspaceRole.name}
                         </Badge>
                         <Badge className="bg-yellow-100 text-yellow-800">
-                          Pending
+                          {t("team.pending")}
                         </Badge>
                         {hasActions && (
                           <DropdownMenu>
@@ -343,7 +350,7 @@ export default function TeamPage() {
                                   disabled={isProcessing}
                                 >
                                   <Mail className="w-4 h-4 mr-2" />
-                                  Resend invite
+                                  {t("team.resendInvite")}
                                 </DropdownMenuItem>
                               )}
                               {canCancel && (
@@ -353,7 +360,7 @@ export default function TeamPage() {
                                   disabled={isProcessing}
                                 >
                                   <Trash2 className="w-4 h-4 mr-2" />
-                                  Cancel invite
+                                  {t("team.cancelInvite")}
                                 </DropdownMenuItem>
                               )}
                             </DropdownMenuContent>
@@ -372,23 +379,23 @@ export default function TeamPage() {
         {hasPermission("workspace.settings") && (
           <Card>
             <CardHeader>
-              <CardTitle>Team settings</CardTitle>
+              <CardTitle>{t("team.settings")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">
-                  Workspace name
+                  {t("team.workspaceName")}
                 </label>
                 <Input defaultValue={selectedWorkspace?.name || ""} className="h-10" />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">
-                  Workspace description
+                  {t("team.workspaceDescription")}
                 </label>
                 <Input defaultValue={selectedWorkspace?.description || ""} className="h-10" />
               </div>
               <Button className="bg-primary hover:bg-primary/90">
-                Save changes
+                {t("team.saveChanges")}
               </Button>
             </CardContent>
           </Card>

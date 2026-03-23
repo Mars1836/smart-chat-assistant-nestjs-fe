@@ -26,7 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import {
   Loader2,
   Plus,
@@ -63,6 +63,10 @@ import { PluginActionsDialog } from "@/components/plugin-actions-dialog";
 import { CreateToolDialog } from "@/components/create-tool-dialog";
 import { ImportPluginDialog } from "@/components/import-plugin-dialog";
 import { ToolActionsManager } from "@/components/tool-actions-manager";
+import {
+  translateTemplate,
+  useLanguage,
+} from "@/components/providers/language-provider";
 
 // Icon mapping for tool types
 const getToolIcon = (name: string, executorType?: string) => {
@@ -80,7 +84,10 @@ const getToolIcon = (name: string, executorType?: string) => {
 };
 
 // Auth type badge
-const getAuthBadge = (plugin: Plugin) => {
+const getAuthBadge = (
+  plugin: Plugin,
+  t: (key: string, fallback?: string) => string
+) => {
   const authType = plugin.auth_config?.type || "none";
 
   switch (authType) {
@@ -90,7 +97,7 @@ const getAuthBadge = (plugin: Plugin) => {
       return (
         <Badge variant="secondary" className="gap-1 font-normal">
           <User className="w-3 h-3" />
-          User Auth
+          {t("plugins.userAuth", "User Auth")}
         </Badge>
       );
     case "api_key":
@@ -100,7 +107,7 @@ const getAuthBadge = (plugin: Plugin) => {
       return (
         <Badge variant="outline" className="gap-1 font-normal">
           <Key className="w-3 h-3" />
-          Admin Config
+          {t("plugins.adminConfig", "Admin Config")}
         </Badge>
       );
     default:
@@ -110,6 +117,7 @@ const getAuthBadge = (plugin: Plugin) => {
 
 function PluginsContent() {
   const { selectedWorkspace, hasPermission } = useWorkspace();
+  const { t } = useLanguage();
   const [allPlugins, setAllPlugins] = useState<Plugin[]>([]);
   const [workspacePlugins, setWorkspacePlugins] = useState<Plugin[]>([]);
   const [loading, setLoading] = useState(true);
@@ -128,7 +136,6 @@ function PluginsContent() {
   const [deletingCustom, setDeletingCustom] = useState<string | null>(null);
   
   const searchParams = useSearchParams();
-  const router = useRouter();
 
   // Dialog states
   const [oauthDialogOpen, setOAuthDialogOpen] = useState(false);
@@ -149,7 +156,9 @@ function PluginsContent() {
 
     if (connected === "true") {
       toast.success(
-        email ? `Kết nối thành công: ${email}` : "Kết nối thành công"
+        email
+          ? translateTemplate(t("plugins.connectedAs"), { email })
+          : t("plugins.connectedSuccess")
       );
       
       const newUrl = window.location.pathname;
@@ -203,7 +212,7 @@ function PluginsContent() {
       setWorkspacePlugins(workspaceData);
     } catch (err: any) {
       console.error("Error loading plugins:", err);
-      toast.error("Không thể tải danh sách plugin", {
+      toast.error(t("plugins.loadFailed"), {
         description: err?.response?.data?.message || "Unknown error",
       });
     } finally {
@@ -221,11 +230,13 @@ function PluginsContent() {
         is_enabled: true,
       });
       
-      toast.success(`Đã thêm ${plugin.display_name} vào workspace`);
+      toast.success(
+        translateTemplate(t("plugins.addSuccess"), { name: plugin.display_name })
+      );
       loadPlugins(true);
     } catch (err: any) {
       console.error("Error adding plugin:", err);
-      toast.error("Không thể thêm plugin", {
+      toast.error(t("plugins.addFailed"), {
         description: err?.response?.data?.message || "Unknown error",
       });
     } finally {
@@ -257,10 +268,15 @@ function PluginsContent() {
         )
       );
 
-      toast.success(enabled ? `Đã bật ${plugin.display_name}` : `Đã tắt ${plugin.display_name}`);
+      toast.success(
+        translateTemplate(
+          enabled ? t("plugins.enableSuccess") : t("plugins.disableSuccess"),
+          { name: plugin.display_name }
+        )
+      );
     } catch (err: any) {
       console.error("Error toggling plugin:", err);
-      toast.error("Không thể cập nhật plugin", {
+      toast.error(t("plugins.updateFailed"), {
         description: err?.response?.data?.message || "Unknown error",
       });
     } finally {
@@ -288,11 +304,13 @@ function PluginsContent() {
 
     try {
       await workspaceToolsApi.remove(selectedWorkspace.id, plugin.id);
-      toast.success(`Đã xóa ${plugin.display_name} khỏi workspace`);
+      toast.success(
+        translateTemplate(t("plugins.removeSuccess"), { name: plugin.display_name })
+      );
       loadPlugins(true);
     } catch (err: any) {
       console.error("Error removing plugin:", err);
-      toast.error("Không thể xóa plugin", {
+      toast.error(t("plugins.removeFailed"), {
         description: err?.response?.data?.message || "Unknown error",
       });
     }
@@ -303,14 +321,18 @@ function PluginsContent() {
 
     // Confirm before permanently deleting
     const confirmed = window.confirm(
-      `Bạn có chắc muốn xoá vĩnh viễn plugin "${plugin.display_name}"?\n\nHành động này không thể hoàn tác.`
+      translateTemplate(t("plugins.deleteConfirm"), {
+        name: plugin.display_name,
+      })
     );
     if (!confirmed) return;
 
     try {
       setDeletingCustom(plugin.id);
       await workspaceToolsApi.deleteCustom(selectedWorkspace.id, plugin.id);
-      toast.success(`Đã xoá vĩnh viễn plugin ${plugin.display_name}`);
+      toast.success(
+        translateTemplate(t("plugins.deleteSuccess"), { name: plugin.display_name })
+      );
       loadPlugins(true);
     } catch (err: any) {
       console.error("Error deleting custom plugin:", err);
@@ -318,12 +340,12 @@ function PluginsContent() {
       let message = err?.response?.data?.message || "Unknown error";
       
       if (status === 403) {
-        message = "Bạn không có quyền xoá plugin này";
+        message = t("plugins.deleteForbidden");
       } else if (status === 400) {
-        message = "Plugin đang được sử dụng ở workspace khác";
+        message = t("plugins.deleteInUse");
       }
       
-      toast.error("Không thể xoá plugin", { description: message });
+      toast.error(t("plugins.deleteFailed"), { description: message });
     } finally {
       setDeletingCustom(null);
     }
@@ -381,7 +403,7 @@ function PluginsContent() {
             Plugins
           </h1>
           <p className="text-muted-foreground mt-1">
-            Quản lý các plugin cho workspace của bạn
+            {t("plugins.description")}
           </p>
         </div>
 
@@ -393,14 +415,14 @@ function PluginsContent() {
             className="gap-2"
           >
             <Upload className="w-4 h-4" />
-            Import Plugin
+            {t("plugins.import")}
           </Button>
           <Button
             onClick={() => setCreateToolDialogOpen(true)}
             className="gap-2"
           >
             <Plus className="w-4 h-4" />
-            Create Tool
+            {t("plugins.createTool")}
           </Button>
         </div>
 
@@ -416,7 +438,7 @@ function PluginsContent() {
               readOnly={!isSearchFocused}
               onFocus={() => setIsSearchFocused(true)}
               onBlur={() => setIsSearchFocused(false)}
-              placeholder="Tìm kiếm plugin..."
+              placeholder={t("plugins.search")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 h-10"
@@ -430,13 +452,13 @@ function PluginsContent() {
             >
               <SelectTrigger className="w-[140px]">
                  <Filter className="w-3 h-3 mr-2" />
-                 <SelectValue placeholder="Category" />
+                 <SelectValue placeholder={t("plugins.category")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="builtin">Built-in</SelectItem>
-                <SelectItem value="custom">Custom</SelectItem>
-                <SelectItem value="community">Community</SelectItem>
+                <SelectItem value="all">{t("plugins.allTypes")}</SelectItem>
+                <SelectItem value="builtin">{t("plugins.builtin")}</SelectItem>
+                <SelectItem value="custom">{t("plugins.custom")}</SelectItem>
+                <SelectItem value="community">{t("plugins.community")}</SelectItem>
               </SelectContent>
             </Select>
 
@@ -445,22 +467,22 @@ function PluginsContent() {
                 <Button variant="outline" className="w-[140px] justify-between">
                   <span className="flex items-center gap-2">
                     <ArrowUpDown className="w-3 h-3" />
-                    Sort
+                    {t("plugins.sort")}
                   </span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Sort By</DropdownMenuLabel>
+                <DropdownMenuLabel>{t("plugins.sortBy")}</DropdownMenuLabel>
                 <DropdownMenuRadioGroup value={sortBy} onValueChange={(v:any) => setSortBy(v)}>
-                  <DropdownMenuRadioItem value="name">Name</DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="category">Category</DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="created_at">Created Date</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="name">{t("plugins.sort.name")}</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="category">{t("plugins.sort.category")}</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="created_at">{t("plugins.sort.createdAt")}</DropdownMenuRadioItem>
                 </DropdownMenuRadioGroup>
                 <DropdownMenuSeparator />
-                <DropdownMenuLabel>Order</DropdownMenuLabel>
+                <DropdownMenuLabel>{t("plugins.order")}</DropdownMenuLabel>
                 <DropdownMenuRadioGroup value={sortOrder} onValueChange={(v:any) => setSortOrder(v)}>
-                  <DropdownMenuRadioItem value="asc">Ascending</DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="desc">Descending</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="asc">{t("plugins.order.asc")}</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="desc">{t("plugins.order.desc")}</DropdownMenuRadioItem>
                 </DropdownMenuRadioGroup>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -472,12 +494,12 @@ function PluginsContent() {
           <TabsList className="grid w-full max-w-md grid-cols-2">
             <TabsTrigger value="workspace" className="gap-2">
               <Plug className="w-4 h-4" />
-              Workspace
+              {t("plugins.workspaceTab")}
               <Badge variant="secondary" className="ml-1">{workspacePlugins.length}</Badge>
             </TabsTrigger>
             <TabsTrigger value="all" className="gap-2">
               <Globe className="w-4 h-4" />
-              All Plugins
+              {t("plugins.allTab")}
               <Badge variant="secondary" className="ml-1">{allPlugins.length}</Badge>
             </TabsTrigger>
           </TabsList>
@@ -489,7 +511,7 @@ function PluginsContent() {
                 <CardContent className="py-12 text-center">
                   <Plug className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
                   <p className="text-muted-foreground">
-                    Không tìm thấy plugin nào.
+                    {t("plugins.emptyAll")}
                   </p>
                 </CardContent>
               </Card>
@@ -497,7 +519,6 @@ function PluginsContent() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {filteredAllPlugins.map((tool) => {
                   const Icon = getToolIcon(tool.name, tool.executor_type);
-                  const authType = tool.auth_config?.type || "none";
                   const isAdded = workspacePluginIds.has(tool.id);
                   const isAdding = addingPlugin === tool.id;
 
@@ -530,7 +551,7 @@ function PluginsContent() {
                                 {tool.display_name}
                               </h3>
                               <Badge variant="outline">{tool.category}</Badge>
-                              {getAuthBadge(tool)}
+                              {getAuthBadge(tool, t)}
                             </div>
                             <p className="text-sm text-muted-foreground line-clamp-2">
                               {tool.description}
@@ -542,7 +563,7 @@ function PluginsContent() {
                             {isAdded ? (
                               <Badge className="gap-1 bg-green-600 hover:bg-green-600">
                                 <Check className="w-3 h-3" />
-                                Added
+                                {t("plugins.added", "Added")}
                               </Badge>
                             ) : (
                               <Button
@@ -556,7 +577,7 @@ function PluginsContent() {
                                 ) : (
                                   <Plus className="w-4 h-4" />
                                 )}
-                                Add
+                                {t("plugins.add", "Add")}
                               </Button>
                             )}
                           </div>
@@ -576,10 +597,10 @@ function PluginsContent() {
                 <CardContent className="py-12 text-center">
                   <Plug className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
                   <p className="text-muted-foreground">
-                    Chưa có plugin nào trong workspace.
+                    {t("plugins.emptyWorkspace")}
                   </p>
                   <p className="text-sm text-muted-foreground mt-2">
-                    Chuyển sang tab "All Plugins" để thêm plugin.
+                    {t("plugins.emptyWorkspaceHint")}
                   </p>
                 </CardContent>
               </Card>
@@ -620,7 +641,7 @@ function PluginsContent() {
                                 {plugin.display_name}
                               </h3>
                               <Badge variant="outline">{plugin.category}</Badge>
-                              {getAuthBadge(plugin)}
+                              {getAuthBadge(plugin, t)}
                             </div>
                             <p className="text-sm text-muted-foreground line-clamp-2">
                               {plugin.description}
@@ -633,7 +654,10 @@ function PluginsContent() {
                                   <div className="flex items-center gap-2 text-sm">
                                     <CheckCircle2 className="w-4 h-4 text-green-500" />
                                     <span className="text-green-600 font-medium">
-                                      Connected as {plugin.user_auth_status.profile?.email}
+                                      {translateTemplate(t("plugins.connectedAs"), {
+                                        email:
+                                          plugin.user_auth_status.profile?.email || "",
+                                      })}
                                     </span>
                                     <Button
                                       variant="ghost"
@@ -641,20 +665,20 @@ function PluginsContent() {
                                       onClick={() => handleConnect(plugin)}
                                       className="h-6 px-2 text-muted-foreground hover:text-destructive hover:bg-transparent text-xs"
                                     >
-                                      Disconnect
+                                      {t("plugins.disconnect")}
                                     </Button>
                                   </div>
                                 ) : (
                                   <div className="flex items-center gap-2 text-sm">
                                     <AlertCircle className="w-4 h-4 text-orange-500" />
-                                    <span className="text-orange-600 font-medium">Not connected</span>
+                                    <span className="text-orange-600 font-medium">{t("plugins.notConnected")}</span>
                                     <Button
                                       variant="outline"
                                       size="sm"
                                       onClick={() => handleConnect(plugin)}
                                       className="h-7 text-xs"
                                     >
-                                      Connect Account
+                                      {t("plugins.connectAccount")}
                                     </Button>
                                   </div>
                                 )}
@@ -666,27 +690,27 @@ function PluginsContent() {
                                 {isApiKeyConfigured(plugin) ? (
                                   <div className="flex items-center gap-2 text-sm">
                                     <CheckCircle2 className="w-4 h-4 text-green-500" />
-                                    <span className="text-green-600 font-medium">API Key configured</span>
+                                    <span className="text-green-600 font-medium">{t("plugins.apiKeyConfigured")}</span>
                                     <Button
                                       variant="ghost"
                                       size="sm"
                                       onClick={() => handleConfigureApiKey(plugin)}
                                       className="h-6 px-2 text-muted-foreground text-xs"
                                     >
-                                      Edit Key
+                                      {t("plugins.editKey")}
                                     </Button>
                                   </div>
                                 ) : (
                                   <div className="flex items-center gap-2 text-sm">
                                     <XCircle className="w-4 h-4 text-red-500" />
-                                    <span className="text-red-600 font-medium">API Key not configured</span>
+                                    <span className="text-red-600 font-medium">{t("plugins.apiKeyMissing")}</span>
                                     <Button
                                       variant="outline"
                                       size="sm"
                                       onClick={() => handleConfigureApiKey(plugin)}
                                       className="h-7 text-xs"
                                     >
-                                      Set API Key
+                                      {t("plugins.setApiKey")}
                                     </Button>
                                   </div>
                                 )}
@@ -719,7 +743,7 @@ function PluginsContent() {
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem onClick={() => handleShowActions(plugin)}>
                                   <Zap className="w-4 h-4 mr-2" />
-                                  View Actions
+                                  {t("plugins.viewActions")}
                                 </DropdownMenuItem>
                                 {/* Show Manage Actions option only for custom plugins */}
                                 {plugin.category === "custom" && (
@@ -728,7 +752,7 @@ function PluginsContent() {
                                     setManageActionsDialogOpen(true);
                                   }}>
                                     <Edit2 className="w-4 h-4 mr-2" />
-                                    Manage Actions
+                                    {t("plugins.manageActions")}
                                   </DropdownMenuItem>
                                 )}
                                 <DropdownMenuSeparator />
@@ -737,7 +761,7 @@ function PluginsContent() {
                                   className="text-destructive focus:text-destructive focus:bg-destructive/10"
                                 >
                                   <Trash2 className="w-4 h-4 mr-2" />
-                                  Remove from Workspace
+                                  {t("plugins.removeFromWorkspace")}
                                 </DropdownMenuItem>
                                 {/* Show Delete Permanently option only for custom private plugins */}
                                 {plugin.category === "custom" && !(plugin as any).is_public && (
@@ -746,7 +770,7 @@ function PluginsContent() {
                                     className="text-destructive focus:text-destructive focus:bg-destructive/10 font-medium"
                                   >
                                     <Trash2 className="w-4 h-4 mr-2" />
-                                    Delete Permanently
+                                    {t("plugins.deletePermanently")}
                                   </DropdownMenuItem>
                                 )}
                               </DropdownMenuContent>

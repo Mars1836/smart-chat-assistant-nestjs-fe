@@ -47,7 +47,7 @@ export function AppLayout({ children, activeModule }: AppLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { logout } = useAuth();
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const {
     selectedWorkspace,
     workspaces,
@@ -133,7 +133,7 @@ export function AppLayout({ children, activeModule }: AppLayoutProps) {
       ? [
           {
             id: "billing" as const,
-            label: "Giao dịch",
+            label: t("layout.billing"),
             icon: CreditCard,
             href: "/billing",
           },
@@ -141,7 +141,7 @@ export function AppLayout({ children, activeModule }: AppLayoutProps) {
       : []),
     {
       id: "pricing",
-      label: "Bảng giá",
+      label: t("layout.pricing"),
       icon: Coins,
       href: "/pricing",
     },
@@ -284,19 +284,22 @@ export function AppLayout({ children, activeModule }: AppLayoutProps) {
             {selectedWorkspace && (
               <div className="flex flex-col items-end text-xs min-w-[180px]">
                 <span className="font-medium">
-                  Số dư:{" "}
+                  {t("layout.balance")}:{" "}
                   {walletLoading
-                    ? "Đang tải..."
+                    ? t("layout.loadingBalance")
                     : wallet
-                    ? `${new Intl.NumberFormat("vi-VN", {
+                    ? `${new Intl.NumberFormat(
+                        locale === "vi" ? "vi-VN" : "en-US",
+                        {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
-                      }).format(wallet.balance)} ${wallet.currency}`
-                    : "Không có dữ liệu"}
+                      }
+                      ).format(wallet.balance)} ${wallet.currency}`
+                    : t("layout.noWalletData")}
                 </span>
                 {wallet && wallet.status !== "active" && (
                   <span className="mt-0.5 text-destructive">
-                    Ví đang bị tạm khóa
+                    {t("layout.walletLocked")}
                   </span>
                 )}
               </div>

@@ -28,33 +28,38 @@ import { Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useWorkspace } from "@/lib/stores/workspace-store";
 import {
+  translateTemplate,
+  useLanguage,
+} from "@/components/providers/language-provider";
+import {
   workspacesApi,
   type BillingTransaction,
 } from "@/lib/api";
 import { toast } from "sonner";
 
-function formatAmount(amount: string): string {
+function formatAmount(amount: string, locale: "vi" | "en"): string {
   const n = parseFloat(amount);
   if (Number.isNaN(n)) return amount;
-  const formatted = new Intl.NumberFormat("vi-VN", {
+  const formatted = new Intl.NumberFormat(locale === "vi" ? "vi-VN" : "en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 4,
   }).format(n);
   return n >= 0 ? `+${formatted}` : formatted;
 }
 
-function typeLabel(type: string): string {
+function typeLabel(type: string, t: (key: string) => string): string {
   const map: Record<string, string> = {
-    topup: "Nạp tiền",
-    usage: "Dùng token",
-    refund: "Hoàn tiền",
-    adjustment: "Điều chỉnh",
+    topup: t("billing.type.topup"),
+    usage: t("billing.type.usage"),
+    refund: t("billing.type.refund"),
+    adjustment: t("billing.type.adjustment"),
   };
   return map[type] ?? type;
 }
 
 export default function BillingPage() {
   const { selectedWorkspace } = useWorkspace();
+  const { t, locale } = useLanguage();
   const [transactions, setTransactions] = useState<BillingTransaction[]>([]);
   const [meta, setMeta] = useState<{
     total: number;
@@ -103,7 +108,7 @@ export default function BillingPage() {
           setTransactions([]);
           setMeta(null);
         } else {
-          toast.error("Không tải được lịch sử giao dịch");
+          toast.error(t("billing.loadError"));
           setTransactions([]);
           setMeta(null);
         }
@@ -116,10 +121,10 @@ export default function BillingPage() {
       <div className="p-6 max-w-5xl mx-auto space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">
-            Lịch sử giao dịch & Token
+            {t("billing.title")}
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Giao dịch ví workspace và lịch sử sử dụng token (chỉ Owner & Admin).
+            {t("billing.description")}
           </p>
         </div>
 
@@ -127,7 +132,7 @@ export default function BillingPage() {
           <Card className="border-amber-200 bg-amber-50/50 dark:bg-amber-950/20 dark:border-amber-800">
             <CardContent className="pt-6">
               <p className="text-sm text-amber-800 dark:text-amber-200">
-                Chỉ Owner và Admin workspace mới xem được trang này.
+                {t("billing.ownerOnly")}
               </p>
             </CardContent>
           </Card>
@@ -137,7 +142,7 @@ export default function BillingPage() {
           <Card className="border-destructive/50 bg-destructive/5">
             <CardContent className="pt-6">
               <p className="text-sm text-destructive">
-                Bạn không có quyền xem lịch sử giao dịch (403). Chỉ Owner và Admin workspace mới được cấp quyền.
+                {t("billing.forbidden")}
               </p>
             </CardContent>
           </Card>
@@ -146,9 +151,9 @@ export default function BillingPage() {
         {canView && !forbidden && (
           <Card>
             <CardHeader>
-              <CardTitle>Giao dịch</CardTitle>
+              <CardTitle>{t("billing.transactions")}</CardTitle>
               <CardDescription>
-                Nạp tiền, dùng token, hoàn tiền, điều chỉnh
+                {t("billing.transactionTypes")}
               </CardDescription>
               <div className="pt-2">
                 <Select
@@ -159,14 +164,14 @@ export default function BillingPage() {
                   }}
                 >
                   <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Loại giao dịch" />
+                    <SelectValue placeholder={t("billing.typePlaceholder")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Tất cả</SelectItem>
-                    <SelectItem value="topup">Nạp tiền</SelectItem>
-                    <SelectItem value="usage">Dùng token</SelectItem>
-                    <SelectItem value="refund">Hoàn tiền</SelectItem>
-                    <SelectItem value="adjustment">Điều chỉnh</SelectItem>
+                    <SelectItem value="all">{t("billing.all")}</SelectItem>
+                    <SelectItem value="topup">{t("billing.type.topup")}</SelectItem>
+                    <SelectItem value="usage">{t("billing.type.usage")}</SelectItem>
+                    <SelectItem value="refund">{t("billing.type.refund")}</SelectItem>
+                    <SelectItem value="adjustment">{t("billing.type.adjustment")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -181,13 +186,13 @@ export default function BillingPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Thời gian</TableHead>
-                        <TableHead>Thành viên</TableHead>
-                        <TableHead>Loại</TableHead>
-                        <TableHead className="text-right">Credit</TableHead>
-                        <TableHead>Mô tả</TableHead>
-                        <TableHead className="text-right">Input tokens</TableHead>
-                        <TableHead className="text-right">Output tokens</TableHead>
+                        <TableHead>{t("billing.time")}</TableHead>
+                        <TableHead>{t("billing.member")}</TableHead>
+                        <TableHead>{t("billing.type")}</TableHead>
+                        <TableHead className="text-right">{t("billing.credit")}</TableHead>
+                        <TableHead>{t("billing.descriptionCol")}</TableHead>
+                        <TableHead className="text-right">{t("billing.inputTokens")}</TableHead>
+                        <TableHead className="text-right">{t("billing.outputTokens")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -197,21 +202,23 @@ export default function BillingPage() {
                             colSpan={7}
                             className="text-center text-muted-foreground py-8"
                           >
-                            Chưa có giao dịch nào
+                            {t("billing.noTransactions")}
                           </TableCell>
                         </TableRow>
                       ) : (
                         transactions.map((tx) => (
                           <TableRow key={tx.id}>
                             <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
-                              {new Date(tx.created_at).toLocaleString("vi-VN")}
+                              {new Date(tx.created_at).toLocaleString(
+                                locale === "vi" ? "vi-VN" : "en-US"
+                              )}
                             </TableCell>
                             <TableCell className="text-sm">
                               {tx.user
                                 ? tx.user.name || tx.user.email || "—"
-                                : "Khách"}
+                                : t("billing.guest")}
                             </TableCell>
-                            <TableCell>{typeLabel(tx.type)}</TableCell>
+                            <TableCell>{typeLabel(tx.type, t)}</TableCell>
                             <TableCell
                               className={`text-right font-mono ${
                                 parseFloat(tx.amount) >= 0
@@ -219,7 +226,7 @@ export default function BillingPage() {
                                   : "text-red-600 dark:text-red-400"
                               }`}
                             >
-                              {formatAmount(tx.amount)}
+                              {formatAmount(tx.amount, locale)}
                             </TableCell>
                             <TableCell className="max-w-[280px] truncate text-sm">
                               {tx.description || "—"}
@@ -238,8 +245,11 @@ export default function BillingPage() {
                   {meta && meta.totalPages > 1 && (
                     <div className="flex items-center justify-between mt-4">
                       <p className="text-sm text-muted-foreground">
-                        Trang {meta.page} / {meta.totalPages} (tổng {meta.total}{" "}
-                        giao dịch)
+                        {translateTemplate(t("billing.pageInfo"), {
+                          page: meta.page,
+                          totalPages: meta.totalPages,
+                          total: meta.total,
+                        })}
                       </p>
                       <div className="flex gap-2">
                         <Button
@@ -248,7 +258,7 @@ export default function BillingPage() {
                           disabled={page <= 1}
                           onClick={() => setPage((p) => p - 1)}
                         >
-                          Trước
+                          {t("billing.previous")}
                         </Button>
                         <Button
                           variant="outline"
@@ -256,7 +266,7 @@ export default function BillingPage() {
                           disabled={page >= meta.totalPages}
                           onClick={() => setPage((p) => p + 1)}
                         >
-                          Sau
+                          {t("billing.next")}
                         </Button>
                       </div>
                     </div>

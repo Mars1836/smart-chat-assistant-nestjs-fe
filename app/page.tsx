@@ -4,6 +4,8 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/stores/auth-store";
 import { Button } from "@/components/ui/button";
+import { LanguageSwitcher } from "@/components/language-switcher";
+import { useLanguage } from "@/components/providers/language-provider";
 import {
   Card,
   CardContent,
@@ -19,11 +21,11 @@ import {
   ArrowRight,
   Sparkles,
 } from "lucide-react";
-import Link from "next/link";
 
 export default function HomePage() {
   const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
+  const { t } = useLanguage();
 
   useEffect(() => {
     // Redirect to chat if already authenticated
@@ -51,14 +53,15 @@ export default function HomePage() {
           <span className="text-2xl font-bold text-foreground">WorkMind</span>
         </div>
         <div className="flex gap-4">
+          <LanguageSwitcher compact />
           <Button variant="ghost" onClick={() => router.push("/auth/login")}>
-            Sign in
+            {t("landing.signIn")}
           </Button>
           <Button
             className="bg-primary hover:bg-primary/90"
             onClick={() => router.push("/auth/signup")}
           >
-            Get started
+            {t("landing.getStarted")}
           </Button>
         </div>
       </header>
@@ -67,12 +70,13 @@ export default function HomePage() {
       <section className="container mx-auto px-4 py-20 text-center">
         <div className="max-w-3xl mx-auto">
           <h1 className="text-5xl font-bold text-foreground mb-6">
-            AI-Powered Task Management
-            <span className="block text-primary mt-2">for Modern Teams</span>
+            {t("landing.heroTitle")}
+            <span className="block text-primary mt-2">
+              {t("landing.heroHighlight")}
+            </span>
           </h1>
           <p className="text-xl text-muted-foreground mb-8">
-            Streamline your workflow with intelligent automation, seamless
-            collaboration, and powerful AI assistance.
+            {t("landing.heroDescription")}
           </p>
           <div className="flex gap-4 justify-center">
             <Button
@@ -80,7 +84,7 @@ export default function HomePage() {
               className="bg-primary hover:bg-primary/90 text-lg px-8"
               onClick={handleGetStarted}
             >
-              Get started free
+              {t("landing.getStartedFree")}
               <ArrowRight className="w-5 h-5 ml-2" />
             </Button>
             <Button
@@ -89,7 +93,7 @@ export default function HomePage() {
               className="text-lg px-8"
               onClick={() => router.push("/auth/login")}
             >
-              Sign in
+              {t("landing.signIn")}
             </Button>
           </div>
         </div>
@@ -98,15 +102,15 @@ export default function HomePage() {
       {/* Features Section */}
       <section className="container mx-auto px-4 py-20">
         <h2 className="text-3xl font-bold text-center text-foreground mb-12">
-          Everything you need to stay productive
+          {t("landing.featuresTitle")}
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader>
               <MessageSquare className="w-10 h-10 text-primary mb-4" />
-              <CardTitle>AI Chat Assistant</CardTitle>
+              <CardTitle>{t("landing.feature.chat.title")}</CardTitle>
               <CardDescription>
-                Get instant help with your tasks using advanced AI technology
+                {t("landing.feature.chat.description")}
               </CardDescription>
             </CardHeader>
           </Card>
@@ -114,9 +118,9 @@ export default function HomePage() {
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader>
               <Calendar className="w-10 h-10 text-primary mb-4" />
-              <CardTitle>Smart Calendar</CardTitle>
+              <CardTitle>{t("landing.feature.calendar.title")}</CardTitle>
               <CardDescription>
-                Manage your schedule and never miss an important deadline
+                {t("landing.feature.calendar.description")}
               </CardDescription>
             </CardHeader>
           </Card>
@@ -124,9 +128,9 @@ export default function HomePage() {
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader>
               <FileText className="w-10 h-10 text-primary mb-4" />
-              <CardTitle>Document Management</CardTitle>
+              <CardTitle>{t("landing.feature.docs.title")}</CardTitle>
               <CardDescription>
-                Store, organize, and access all your files in one place
+                {t("landing.feature.docs.description")}
               </CardDescription>
             </CardHeader>
           </Card>
@@ -134,9 +138,9 @@ export default function HomePage() {
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader>
               <Users className="w-10 h-10 text-primary mb-4" />
-              <CardTitle>Team Collaboration</CardTitle>
+              <CardTitle>{t("landing.feature.team.title")}</CardTitle>
               <CardDescription>
-                Work together seamlessly with your team members
+                {t("landing.feature.team.description")}
               </CardDescription>
             </CardHeader>
           </Card>
@@ -148,18 +152,17 @@ export default function HomePage() {
         <Card className="bg-primary/10 border-primary/20 max-w-3xl mx-auto">
           <CardContent className="p-12 text-center">
             <h2 className="text-3xl font-bold text-foreground mb-4">
-              Ready to boost your productivity?
+              {t("landing.ctaTitle")}
             </h2>
             <p className="text-lg text-muted-foreground mb-8">
-              Join thousands of teams already using WorkMind to stay organized
-              and efficient.
+              {t("landing.ctaDescription")}
             </p>
             <Button
               size="lg"
               className="bg-primary hover:bg-primary/90 text-lg px-8"
               onClick={handleGetStarted}
             >
-              Start for free today
+              {t("landing.ctaButton")}
               <ArrowRight className="w-5 h-5 ml-2" />
             </Button>
           </CardContent>
@@ -169,7 +172,7 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="container mx-auto px-4 py-8 border-t border-border">
         <div className="flex items-center justify-center text-sm text-muted-foreground">
-          <p>© 2025 WorkMind. All rights reserved.</p>
+          <p>{t("landing.footer")}</p>
         </div>
       </footer>
     </div>

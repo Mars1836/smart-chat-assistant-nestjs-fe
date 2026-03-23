@@ -24,10 +24,15 @@ import {
 } from "@/lib/api";
 import { API_BASE_URL } from "@/lib/constants";
 import { useRouter } from "next/navigation";
+import {
+  translateTemplate,
+  useLanguage,
+} from "@/components/providers/language-provider";
 
 export default function WorkspaceSettingsPage() {
   const { selectedWorkspace, loadWorkspaces, hasPermission, isLoading } = useWorkspace();
   const router = useRouter();
+  const { t, locale } = useLanguage();
   
   const [formData, setFormData] = useState({
     name: "",
@@ -105,10 +110,12 @@ export default function WorkspaceSettingsPage() {
               lastToastBalanceRef.current = data.balance;
               topupSessionRef.current = false;
 
-              toast.success("Nạp tiền thành công", {
-                description: `Số dư mới: ${data.balance.toLocaleString(
-                  "vi-VN"
-                )} CREDITS`,
+              toast.success(t("settings.createQrSuccess"), {
+                description: translateTemplate(t("settings.topupSuccessDescription"), {
+                  balance: data.balance.toLocaleString(
+                    locale === "vi" ? "vi-VN" : "en-US"
+                  ),
+                }),
               });
             }
           }
@@ -134,7 +141,7 @@ export default function WorkspaceSettingsPage() {
   const handleUpdate = async () => {
     if (!selectedWorkspace) return;
     if (!formData.name.trim()) {
-      toast.error("Workspace name is required");
+      toast.error(t("settings.workspaceNameRequired"));
       return;
     }
 
@@ -144,11 +151,11 @@ export default function WorkspaceSettingsPage() {
         name: formData.name,
         description: formData.description,
       });
-      toast.success("Workspace updated successfully");
+      toast.success(t("settings.workspaceUpdated"));
       loadWorkspaces(); // Reload to update sidebar/header
     } catch (error: any) {
       console.error("Update error:", error);
-      toast.error(error.response?.data?.message || "Failed to update workspace");
+      toast.error(error.response?.data?.message || t("settings.workspaceUpdateFailed"));
     } finally {
       setIsSaving(false);
     }
@@ -172,12 +179,12 @@ export default function WorkspaceSettingsPage() {
     setIsDeleting(true);
     try {
       await workspacesApi.delete(selectedWorkspace.id);
-      toast.success("Workspace deleted successfully");
+      toast.success(t("settings.deleteSuccess"));
       await loadWorkspaces();
       router.push("/workspace");
     } catch (error: any) {
       console.error("Delete error:", error);
-      toast.error(error.response?.data?.message || "Failed to delete workspace");
+      toast.error(error.response?.data?.message || t("settings.deleteFailed"));
     } finally {
       setIsDeleting(false);
       setShowDeleteDialog(false);
@@ -206,7 +213,7 @@ export default function WorkspaceSettingsPage() {
 
     const amount = resolveAmount();
     if (!amount || amount <= 0) {
-      toast.error("Vui lòng nhập số tiền hợp lệ (VND)");
+      toast.error(t("settings.invalidAmount"));
       return;
     }
 
@@ -220,11 +227,11 @@ export default function WorkspaceSettingsPage() {
         amount
       );
       setVietQRData(data);
-      toast.success("Đã tạo QR nạp tiền");
+      toast.success(t("settings.createQrSuccess"));
     } catch (error: any) {
       console.error("Create VietQR error:", error);
       toast.error(
-        error?.response?.data?.message || "Không tạo được QR nạp tiền"
+        error?.response?.data?.message || t("settings.createQrFailed")
       );
     } finally {
       setVietQRLoading(false);
@@ -245,7 +252,7 @@ export default function WorkspaceSettingsPage() {
     return (
       <AppLayout activeModule="settings">
         <div className="p-6 text-center text-muted-foreground">
-          No workspace selected.
+          {t("settings.noWorkspace")}
         </div>
       </AppLayout>
     );
@@ -255,24 +262,24 @@ export default function WorkspaceSettingsPage() {
     <AppLayout activeModule="settings">
       <div className="p-6 space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Workspace Settings</h1>
+          <h1 className="text-3xl font-bold text-foreground">{t("settings.title")}</h1>
           <p className="text-muted-foreground mt-2">
-            Manage your workspace configuration
+            {t("settings.description")}
           </p>
         </div>
 
         {/* General Settings */}
         <Card>
           <CardHeader>
-            <CardTitle>General</CardTitle>
+            <CardTitle>{t("settings.general")}</CardTitle>
             <CardDescription>
-              Update your workspace details
+              {t("settings.generalDescription")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">
-                Workspace Name
+                {t("settings.workspaceName")}
               </label>
               <Input
                 value={formData.name}
@@ -283,7 +290,7 @@ export default function WorkspaceSettingsPage() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">
-                Description
+                {t("settings.descriptionLabel")}
               </label>
               <Input
                 value={formData.description}
@@ -299,7 +306,7 @@ export default function WorkspaceSettingsPage() {
                 className="bg-primary hover:bg-primary/90"
               >
                 {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                Save Changes
+                {t("settings.saveChanges")}
               </Button>
             )}
           </CardContent>
@@ -308,30 +315,30 @@ export default function WorkspaceSettingsPage() {
         {/* Billing / Credits */}
         <Card>
           <CardHeader>
-            <CardTitle>Billing & Credits</CardTitle>
+            <CardTitle>{t("settings.billingCredits")}</CardTitle>
             <CardDescription>
-              Nạp credit cho workspace này qua VietQR
+              {t("settings.billingDescription")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-1 text-sm">
               <p className="font-medium text-foreground">
-                Số dư hiện tại
+                {t("settings.currentBalance")}
               </p>
               <p className="text-muted-foreground">
                 {walletLoading
-                  ? "Đang tải..."
+                  ? t("common.loading")
                   : wallet
-                  ? `${new Intl.NumberFormat("vi-VN", {
+                  ? `${new Intl.NumberFormat(locale === "vi" ? "vi-VN" : "en-US", {
                       style: "currency",
                       currency: "VND",
                       minimumFractionDigits: 0,
                     }).format(wallet.balance)} CREDITS`
-                  : "Không có dữ liệu ví"}
+                  : t("settings.noWalletData")}
               </p>
               {wallet && (
                 <p className="text-xs mt-1">
-                  Trạng thái ví:{" "}
+                  {t("settings.walletStatus")}:{" "}
                   <span
                     className={
                       wallet.status === "active"
@@ -350,7 +357,7 @@ export default function WorkspaceSettingsPage() {
                     href="/billing"
                     className="text-sm text-primary hover:underline"
                   >
-                    Xem lịch sử giao dịch & token
+                    {t("settings.viewTransactions")}
                   </Link>
                 </p>
               )}
@@ -358,7 +365,7 @@ export default function WorkspaceSettingsPage() {
 
             <div className="space-y-2">
               <p className="text-sm font-medium text-foreground">
-                Chọn số tiền nạp (VND)
+                {t("settings.topupAmount")}
               </p>
               <div className="flex flex-wrap gap-2">
                 {presetAmounts.map((amt) => (
@@ -372,13 +379,13 @@ export default function WorkspaceSettingsPage() {
                       setCustomAmount("");
                     }}
                   >
-                    {amt.toLocaleString("vi-VN")} đ
+                    {amt.toLocaleString(locale === "vi" ? "vi-VN" : "en-US")} đ
                   </Button>
                 ))}
               </div>
               <div className="space-y-1">
                 <label className="text-sm text-foreground">
-                  Hoặc nhập số tiền khác
+                  {t("settings.customAmount")}
                 </label>
                 <Input
                   type="number"
@@ -392,10 +399,10 @@ export default function WorkspaceSettingsPage() {
                     }
                   }}
                   className="h-9 max-w-xs"
-                  placeholder="Ví dụ: 150000"
+                  placeholder={t("settings.customAmountPlaceholder")}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Đơn vị VND. Khuyến nghị &gt;= 50.000đ.
+                  {t("settings.vndHint")}
                 </p>
               </div>
             </div>
@@ -410,11 +417,11 @@ export default function WorkspaceSettingsPage() {
                 {vietQRLoading && (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 )}
-                Tạo QR nạp tiền
+                {t("settings.createQr")}
               </Button>
               {topupSuccess && (
                 <span className="text-xs text-green-600 dark:text-green-400">
-                  Đã nhận thanh toán, số dư đã được cập nhật.
+                  {t("settings.paymentReceived")}
                 </span>
               )}
             </div>
@@ -425,18 +432,20 @@ export default function WorkspaceSettingsPage() {
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={vietQRData.qr_image_url}
-                    alt="QR nạp tiền"
+                    alt={t("settings.qrAlt")}
                     className="w-40 h-40 object-contain"
                   />
                 </div>
                 <div className="space-y-2 text-sm">
                   <p>
-                    <span className="font-medium">Số tiền:</span>{" "}
-                    {vietQRData.amount.toLocaleString("vi-VN")}{" "}
+                    <span className="font-medium">{t("settings.amount")}:</span>{" "}
+                    {vietQRData.amount.toLocaleString(
+                      locale === "vi" ? "vi-VN" : "en-US"
+                    )}{" "}
                     {vietQRData.currency}
                   </p>
                   <p>
-                    <span className="font-medium">Ngân hàng:</span>{" "}
+                    <span className="font-medium">{t("settings.bank")}:</span>{" "}
                     {vietQRData.bank.bank_id} - {vietQRData.bank.account_no}{" "}
                     {vietQRData.bank.account_name
                       ? `(${vietQRData.bank.account_name})`
@@ -444,16 +453,16 @@ export default function WorkspaceSettingsPage() {
                   </p>
                   <p>
                     <span className="font-medium">
-                      Nội dung chuyển khoản / mã tham chiếu:
+                      {t("settings.transferReference")}:
                     </span>{" "}
                     <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">
                       {vietQRData.reference}
                     </span>
                   </p>
                   <p className="text-xs text-muted-foreground mt-2">
-                    Vui lòng giữ nguyên mã tham chiếu{" "}
-                    <span className="font-mono">{vietQRData.reference}</span>{" "}
-                    để hệ thống có thể đối soát giao dịch chính xác.
+                    {translateTemplate(t("settings.transferHint"), {
+                      reference: vietQRData.reference,
+                    })}
                   </p>
                 </div>
               </div>
@@ -465,17 +474,17 @@ export default function WorkspaceSettingsPage() {
         {canDelete && (
           <Card className="border-destructive/20 bg-destructive/5">
             <CardHeader>
-              <CardTitle className="text-destructive">Danger Zone</CardTitle>
+              <CardTitle className="text-destructive">{t("settings.dangerZone")}</CardTitle>
               <CardDescription>
-                Irreversible actions for this workspace
+                {t("settings.dangerZoneDescription")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-foreground">Delete Workspace</p>
+                  <p className="font-medium text-foreground">{t("settings.deleteWorkspace")}</p>
                   <p className="text-sm text-muted-foreground">
-                    Permanently remove this workspace and all its data.
+                    {t("settings.deleteWorkspaceDescription")}
                   </p>
                 </div>
                 <Button
@@ -483,7 +492,7 @@ export default function WorkspaceSettingsPage() {
                   className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
                   onClick={handleDeleteClick}
                 >
-                  Delete Workspace
+                  {t("settings.deleteWorkspace")}
                 </Button>
               </div>
             </CardContent>
@@ -494,17 +503,18 @@ export default function WorkspaceSettingsPage() {
         <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Are you absolutely sure?</DialogTitle>
+              <DialogTitle>{t("settings.deleteConfirmTitle")}</DialogTitle>
               <DialogDescription>
-                This action cannot be undone. This will permanently delete the workspace
-                <strong> {selectedWorkspace.name}</strong> and remove all associated data.
+                {translateTemplate(t("settings.deleteConfirmDescription"), {
+                  name: selectedWorkspace.name,
+                })}
               </DialogDescription>
             </DialogHeader>
             
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">
-                  Type <strong>delete</strong> to confirm:
+                  {t("settings.typeDeleteConfirm")}
                 </label>
                 <Input
                   value={deleteConfirmation}
@@ -521,14 +531,14 @@ export default function WorkspaceSettingsPage() {
                 onClick={() => setShowDeleteDialog(false)}
                 disabled={isDeleting}
               >
-                Cancel
+                {t("settings.cancel")}
               </Button>
               <Button
                 variant="destructive"
                 onClick={handleConfirmDelete}
                 disabled={deleteConfirmation !== "delete" || isDeleting}
               >
-                {isDeleting ? "Deleting..." : "Delete Workspace"}
+                {isDeleting ? t("settings.deleting") : t("settings.deleteWorkspace")}
               </Button>
             </DialogFooter>
           </DialogContent>

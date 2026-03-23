@@ -19,11 +19,15 @@ import {
 import { Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { llmModelsApi, type LlmModelPricingItem } from "@/lib/api";
+import {
+  translateTemplate,
+  useLanguage,
+} from "@/components/providers/language-provider";
 
-function formatPrice(s: string): string {
+function formatPrice(s: string, locale: "vi" | "en"): string {
   const n = parseFloat(s);
   if (Number.isNaN(n)) return s;
-  return n.toLocaleString("vi-VN", {
+  return n.toLocaleString(locale === "vi" ? "vi-VN" : "en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 6,
   });
@@ -40,6 +44,7 @@ function providerLabel(p: string): string {
 export default function PricingPage() {
   const [items, setItems] = useState<LlmModelPricingItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const { t, locale } = useLanguage();
 
   useEffect(() => {
     llmModelsApi
@@ -65,10 +70,10 @@ export default function PricingPage() {
       <div className="p-6 max-w-4xl mx-auto space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">
-            Bảng giá token
+            {t("pricing.title")}
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Giá tham khảo theo model (per 1K tokens). Input / Output.
+            {t("pricing.description")}
           </p>
         </div>
 
@@ -79,7 +84,7 @@ export default function PricingPage() {
         ) : items.length === 0 ? (
           <Card>
             <CardContent className="py-8 text-center text-muted-foreground">
-              Chưa có dữ liệu bảng giá.
+              {t("pricing.empty")}
             </CardContent>
           </Card>
         ) : (
@@ -89,7 +94,9 @@ export default function PricingPage() {
                 <CardHeader>
                   <CardTitle>{providerLabel(provider)}</CardTitle>
                   <CardDescription>
-                    Các model thuộc {providerLabel(provider)}
+                    {translateTemplate(t("pricing.modelsByProvider"), {
+                      provider: providerLabel(provider),
+                    })}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -98,10 +105,10 @@ export default function PricingPage() {
                       <TableRow>
                         <TableHead>Model</TableHead>
                         <TableHead className="text-right">
-                          Giá input (/1K token)
+                          {t("pricing.inputPrice")}
                         </TableHead>
                         <TableHead className="text-right">
-                          Giá output (/1K token)
+                          {t("pricing.outputPrice")}
                         </TableHead>
                       </TableRow>
                     </TableHeader>
@@ -112,10 +119,10 @@ export default function PricingPage() {
                             {row.display_name || row.model}
                           </TableCell>
                           <TableCell className="text-right font-mono text-muted-foreground">
-                            {formatPrice(row.price_per_1k_input_tokens)}
+                            {formatPrice(row.price_per_1k_input_tokens, locale)}
                           </TableCell>
                           <TableCell className="text-right font-mono text-muted-foreground">
-                            {formatPrice(row.price_per_1k_output_tokens)}
+                            {formatPrice(row.price_per_1k_output_tokens, locale)}
                           </TableCell>
                         </TableRow>
                       ))}

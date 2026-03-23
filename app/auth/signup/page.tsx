@@ -29,7 +29,7 @@ export default function SignupPage() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const setFromAuthResponse = useAuthStore((state) => state.setFromAuthResponse);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -58,7 +58,7 @@ export default function SignupPage() {
         name: formData.name,
         email: formData.email,
         password: formData.password,
-        language: "vi",
+        language: locale,
       });
 
       tokenStorage.setAccessToken(response.accessToken);
@@ -74,7 +74,7 @@ export default function SignupPage() {
         err?.response?.data?.message ||
           (err instanceof Error
             ? err.message
-            : "Registration failed. Please try again.")
+            : t("auth.signup.failed"))
       );
     } finally {
       setIsLoading(false);

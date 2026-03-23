@@ -5,14 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { User, Mail, Loader2, ArrowLeft, Moon, Sun, Bell } from "lucide-react";
+import { User, Loader2, ArrowLeft, Sun, Bell } from "lucide-react";
 import { usersApi, type UserProfileDto } from "@/lib/api";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Switch } from "@/components/ui/switch";
+import { useLanguage } from "@/components/providers/language-provider";
 
 export default function ProfilePage() {
   const router = useRouter();
+  const { t, setLocale } = useLanguage();
   const [profile, setProfile] = useState<UserProfileDto | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -44,7 +46,7 @@ export default function ProfilePage() {
       });
     } catch (error) {
       console.error("Failed to load profile:", error);
-      toast.error("Không tải được profile");
+      toast.error(t("profile.loadFailed"));
     } finally {
       setIsLoading(false);
     }
@@ -57,13 +59,14 @@ export default function ProfilePage() {
         email: formData.email,
         language: formData.language,
       });
-      toast.success("Đã lưu thay đổi");
+      toast.success(t("profile.saveSuccess"));
       setIsEditing(false);
+      setLocale(formData.language === "en" ? "en" : "vi");
       await loadProfile();
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string }; status?: number } };
-      if (e?.response?.status === 409) toast.error("Email đã được user khác sử dụng");
-      else toast.error(e?.response?.data?.message ?? "Không lưu được");
+      if (e?.response?.status === 409) toast.error(t("profile.emailUsed"));
+      else toast.error(e?.response?.data?.message ?? t("profile.saveFailed"));
     }
   };
 
@@ -80,8 +83,8 @@ export default function ProfilePage() {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-foreground">User Settings</h1>
-            <p className="text-muted-foreground">Manage profile and preferences</p>
+            <h1 className="text-3xl font-bold text-foreground">{t("profile.title")}</h1>
+            <p className="text-muted-foreground">{t("profile.description")}</p>
           </div>
         </div>
 
@@ -94,8 +97,8 @@ export default function ProfilePage() {
             {/* Profile Section */}
             <Card>
               <CardHeader>
-                <CardTitle>Profile Information</CardTitle>
-                <CardDescription>Update your personal details</CardDescription>
+                <CardTitle>{t("profile.infoTitle")}</CardTitle>
+                <CardDescription>{t("profile.infoDescription")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="flex items-center gap-6">
@@ -104,14 +107,14 @@ export default function ProfilePage() {
                   </div>
                   <div>
                     <Button variant="outline" size="sm" disabled>
-                      Change Avatar
+                      {t("profile.changeAvatar")}
                     </Button>
                   </div>
                 </div>
 
                 <div className="grid gap-4">
                   <div className="space-y-2">
-                    <Label>Full Name</Label>
+                    <Label>{t("profile.fullName")}</Label>
                     <Input
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -127,7 +130,7 @@ export default function ProfilePage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Ngôn ngữ</Label>
+                    <Label>{t("common.language")}</Label>
                     <select
                       className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
                       value={formData.language}
@@ -144,11 +147,11 @@ export default function ProfilePage() {
 
                 <div className="flex gap-2 justify-end">
                   {!isEditing ? (
-                    <Button onClick={() => setIsEditing(true)}>Edit Profile</Button>
+                    <Button onClick={() => setIsEditing(true)}>{t("profile.edit")}</Button>
                   ) : (
                     <>
-                      <Button variant="ghost" onClick={() => setIsEditing(false)}>Cancel</Button>
-                      <Button onClick={handleSaveProfile}>Save Changes</Button>
+                      <Button variant="ghost" onClick={() => setIsEditing(false)}>{t("common.cancel")}</Button>
+                      <Button onClick={handleSaveProfile}>{t("settings.saveChanges")}</Button>
                     </>
                   )}
                 </div>
@@ -158,14 +161,14 @@ export default function ProfilePage() {
             {/* Preferences Section */}
             <Card>
               <CardHeader>
-                <CardTitle>Preferences</CardTitle>
-                <CardDescription>Customize your experience</CardDescription>
+                <CardTitle>{t("profile.preferences")}</CardTitle>
+                <CardDescription>{t("profile.preferencesDescription")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Sun className="w-4 h-4 text-muted-foreground" />
-                    <Label>Theme</Label>
+                    <Label>{t("profile.theme")}</Label>
                   </div>
                   <div className="flex items-center gap-2 border rounded-md p-1">
                     <Button 
@@ -173,14 +176,14 @@ export default function ProfilePage() {
                       size="sm"
                       onClick={() => setPreferences(p => ({ ...p, theme: 'light' }))}
                     >
-                      Light
+                      {t("profile.theme.light")}
                     </Button>
                     <Button 
                       variant={preferences.theme === 'dark' ? 'secondary' : 'ghost'} 
                       size="sm"
                       onClick={() => setPreferences(p => ({ ...p, theme: 'dark' }))}
                     >
-                      Dark
+                      {t("profile.theme.dark")}
                     </Button>
                   </div>
                 </div>
@@ -188,7 +191,7 @@ export default function ProfilePage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Bell className="w-4 h-4 text-muted-foreground" />
-                    <Label>Notifications</Label>
+                    <Label>{t("profile.notifications")}</Label>
                   </div>
                   <Switch 
                     checked={preferences.notifications}
@@ -201,11 +204,11 @@ export default function ProfilePage() {
             {/* Security Section */}
             <Card>
               <CardHeader>
-                <CardTitle>Security</CardTitle>
+                <CardTitle>{t("profile.security")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <Button variant="outline" className="w-full justify-start">
-                  Change Password
+                  {t("profile.changePassword")}
                 </Button>
               </CardContent>
             </Card>

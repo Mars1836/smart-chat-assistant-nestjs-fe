@@ -12,9 +12,11 @@ import { knowledgeApi, KnowledgeBase, CreateKnowledgeDto } from "@/lib/api/knowl
 import { Plus, Search, Loader2, Book } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { useLanguage } from "@/components/providers/language-provider";
 
 function KnowledgeContent() {
   const { selectedWorkspace } = useWorkspace();
+  const { t } = useLanguage();
   const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBase[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -35,7 +37,7 @@ function KnowledgeContent() {
       setKnowledgeBases(data);
     } catch (error) {
       console.error(error);
-      toast.error("Failed to load knowledge bases");
+      toast.error(t("knowledge.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -45,25 +47,25 @@ function KnowledgeContent() {
     if (!selectedWorkspace) return;
     try {
       await knowledgeApi.create(selectedWorkspace.id, data);
-      toast.success("Knowledge base created successfully");
+      toast.success(t("knowledge.createSuccess"));
       loadKnowledgeBases();
     } catch (error) {
       console.error(error);
-      toast.error("Failed to create knowledge base");
+      toast.error(t("knowledge.createFailed"));
     }
   };
 
   const handleDelete = async (id: string) => {
     if (!selectedWorkspace) return;
-    if (!confirm("Are you sure you want to delete this knowledge base? All documents will be deleted.")) return;
+    if (!confirm(t("knowledge.deleteConfirm"))) return;
     
     try {
       await knowledgeApi.delete(selectedWorkspace.id, id);
-      toast.success("Knowledge base deleted successfully");
+      toast.success(t("knowledge.deleteSuccess"));
       loadKnowledgeBases();
     } catch (error) {
       console.error(error);
-      toast.error("Failed to delete knowledge base");
+      toast.error(t("knowledge.deleteFailed"));
     }
   };
 
@@ -87,19 +89,19 @@ function KnowledgeContent() {
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Knowledge Bases</h1>
-            <p className="text-muted-foreground mt-1">Manage your documentation and external knowledge sources</p>
+            <h1 className="text-3xl font-bold text-foreground">{t("knowledge.title")}</h1>
+            <p className="text-muted-foreground mt-1">{t("knowledge.description")}</p>
           </div>
           <Button onClick={() => setCreateDialogOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
-            New Knowledge Base
+            {t("knowledge.new")}
           </Button>
         </div>
 
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Search knowledge bases..."
+            placeholder={t("knowledge.search")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10 max-w-md"
@@ -109,11 +111,11 @@ function KnowledgeContent() {
         {filteredKnowledge.length === 0 ? (
           <div className="text-center py-20 border rounded-lg bg-muted/10 border-dashed">
             <Book className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium">No knowledge bases found</h3>
-            <p className="text-muted-foreground mb-6">Create your first knowledge base to get started</p>
+            <h3 className="text-lg font-medium">{t("knowledge.emptyTitle")}</h3>
+            <p className="text-muted-foreground mb-6">{t("knowledge.emptyDescription")}</p>
             <Button onClick={() => setCreateDialogOpen(true)}>
               <Plus className="w-4 h-4 mr-2" />
-              Create Knowledge Base
+              {t("knowledge.create")}
             </Button>
           </div>
         ) : (
