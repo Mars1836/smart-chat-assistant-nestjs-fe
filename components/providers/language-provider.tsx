@@ -762,6 +762,32 @@ const dictionaries: Record<Locale, Dictionary> = {
 };
 
 Object.assign(dictionaries.vi, {
+  "auth.tagline": "Nền tảng chatbot AI cho workspace của bạn",
+  "auth.login.title": "Chào mừng đến với WorkMind",
+  "auth.login.description":
+    "Đăng nhập để quản lý chatbot, knowledge và plugins của bạn",
+  "auth.signup.description": "Tạo tài khoản để bắt đầu xây dựng chatbot AI",
+  "landing.heroTitle": "Xây dựng chatbot AI",
+  "landing.heroHighlight": "cho website, tài liệu và workspace của bạn",
+  "landing.heroDescription":
+    "Tạo chatbot, kết nối knowledge, gắn plugins/tools và triển khai trải nghiệm chat phù hợp cho từng workspace.",
+  "landing.featuresTitle": "Mọi thứ bạn cần để vận hành chatbot hiệu quả",
+  "landing.feature.chat.title": "Tạo và quản lý chatbot",
+  "landing.feature.chat.description":
+    "Khởi tạo nhiều chatbot với greeting, personality, model và cấu hình trả lời riêng.",
+  "landing.feature.knowledge.title": "Knowledge tập trung",
+  "landing.feature.knowledge.description":
+    "Nạp tài liệu vào knowledge base để chatbot trả lời dựa trên dữ liệu thực tế của bạn.",
+  "landing.feature.plugins.title": "Plugins và tools",
+  "landing.feature.plugins.description":
+    "Kết nối chatbot với các công cụ như HTTP, email, calendar hoặc tool tùy chỉnh.",
+  "landing.feature.workspace.title": "Phân quyền theo workspace",
+  "landing.feature.workspace.description":
+    "Quản lý thành viên, quyền truy cập và cấu hình riêng cho từng workspace.",
+  "landing.ctaTitle": "Sẵn sàng xây chatbot cho sản phẩm của bạn?",
+  "landing.ctaDescription":
+    "Bắt đầu với một workspace mới, thêm knowledge, cấu hình tools và đưa chatbot vào sử dụng nhanh hơn.",
+  "landing.ctaButton": "Bắt đầu xây chatbot",
   "common.close": "Đóng",
   "common.edit": "Sửa",
   "common.delete": "Xóa",
@@ -796,6 +822,32 @@ Object.assign(dictionaries.vi, {
 });
 
 Object.assign(dictionaries.en, {
+  "auth.tagline": "AI chatbot platform for your workspace",
+  "auth.login.title": "Welcome to WorkMind",
+  "auth.login.description":
+    "Sign in to manage your chatbots, knowledge, and plugins",
+  "auth.signup.description": "Create an account to start building AI chatbots",
+  "landing.heroTitle": "Build AI chatbots",
+  "landing.heroHighlight": "for your website, documents, and workspace",
+  "landing.heroDescription":
+    "Create chatbots, connect knowledge, attach plugins/tools, and deliver the right chat experience for each workspace.",
+  "landing.featuresTitle": "Everything you need to run chatbots well",
+  "landing.feature.chat.title": "Create and manage chatbots",
+  "landing.feature.chat.description":
+    "Launch multiple chatbots with their own greeting, personality, model, and response settings.",
+  "landing.feature.knowledge.title": "Centralized knowledge",
+  "landing.feature.knowledge.description":
+    "Upload documents into knowledge bases so chatbots answer from your real data.",
+  "landing.feature.plugins.title": "Plugins and tools",
+  "landing.feature.plugins.description":
+    "Connect chatbots to HTTP, email, calendar, or custom tools.",
+  "landing.feature.workspace.title": "Workspace-based permissions",
+  "landing.feature.workspace.description":
+    "Control members, access, and configuration separately for each workspace.",
+  "landing.ctaTitle": "Ready to build chatbots for your product?",
+  "landing.ctaDescription":
+    "Start with a new workspace, add knowledge, configure tools, and launch your chatbot faster.",
+  "landing.ctaButton": "Start building chatbots",
   "common.close": "Close",
   "common.edit": "Edit",
   "common.delete": "Delete",

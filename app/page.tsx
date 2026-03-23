@@ -14,12 +14,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  MessageSquare,
-  Calendar,
-  FileText,
-  Users,
   ArrowRight,
+  Bot,
+  BookOpen,
+  Puzzle,
   Sparkles,
+  Workflow,
 } from "lucide-react";
 
 export default function HomePage() {
@@ -107,7 +107,7 @@ export default function HomePage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader>
-              <MessageSquare className="w-10 h-10 text-primary mb-4" />
+              <Bot className="w-10 h-10 text-primary mb-4" />
               <CardTitle>{t("landing.feature.chat.title")}</CardTitle>
               <CardDescription>
                 {t("landing.feature.chat.description")}
@@ -117,30 +117,30 @@ export default function HomePage() {
 
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader>
-              <Calendar className="w-10 h-10 text-primary mb-4" />
-              <CardTitle>{t("landing.feature.calendar.title")}</CardTitle>
+              <BookOpen className="w-10 h-10 text-primary mb-4" />
+              <CardTitle>{t("landing.feature.knowledge.title")}</CardTitle>
               <CardDescription>
-                {t("landing.feature.calendar.description")}
+                {t("landing.feature.knowledge.description")}
               </CardDescription>
             </CardHeader>
           </Card>
 
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader>
-              <FileText className="w-10 h-10 text-primary mb-4" />
-              <CardTitle>{t("landing.feature.docs.title")}</CardTitle>
+              <Puzzle className="w-10 h-10 text-primary mb-4" />
+              <CardTitle>{t("landing.feature.plugins.title")}</CardTitle>
               <CardDescription>
-                {t("landing.feature.docs.description")}
+                {t("landing.feature.plugins.description")}
               </CardDescription>
             </CardHeader>
           </Card>
 
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader>
-              <Users className="w-10 h-10 text-primary mb-4" />
-              <CardTitle>{t("landing.feature.team.title")}</CardTitle>
+              <Workflow className="w-10 h-10 text-primary mb-4" />
+              <CardTitle>{t("landing.feature.workspace.title")}</CardTitle>
               <CardDescription>
-                {t("landing.feature.team.description")}
+                {t("landing.feature.workspace.description")}
               </CardDescription>
             </CardHeader>
           </Card>
