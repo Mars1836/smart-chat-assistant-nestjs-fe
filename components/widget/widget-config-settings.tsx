@@ -87,7 +87,6 @@ export function WidgetConfigSettings({ chatbotId }: WidgetConfigSettingsProps) {
     script.id = 'scw-preview-script';
     script.src = `${widgetUrl}/widget.js`;
     script.setAttribute('data-chatbot-id', chatbotId);
-    script.setAttribute('data-widget-origin', widgetUrl);
     script.setAttribute('data-api-base', apiUrl);
     script.setAttribute('data-position', config.position);
     script.setAttribute('data-color', config.primaryColor);
@@ -236,7 +235,6 @@ export function WidgetConfigSettings({ chatbotId }: WidgetConfigSettingsProps) {
     return `<script
   src="${widgetUrl}/widget.js"
   data-chatbot-id="${chatbotId}"
-  data-widget-origin="${widgetUrl}"
   data-api-base="${apiUrl}"
   data-position="${config.position}"
   data-color="${config.primaryColor}"
@@ -258,7 +256,6 @@ function App() {
     const script = document.createElement('script');
     script.src = '${widgetUrl}/widget.js';
     script.setAttribute('data-chatbot-id', '${chatbotId}');
-    script.setAttribute('data-widget-origin', '${widgetUrl}');
     script.setAttribute('data-api-base', '${apiUrl}');
     script.setAttribute('data-position', '${config.position}');
     script.setAttribute('data-color', '${config.primaryColor}');
@@ -286,7 +283,6 @@ onMounted(() => {
   scriptEl = document.createElement('script');
   scriptEl.src = '${widgetUrl}/widget.js';
   scriptEl.setAttribute('data-chatbot-id', '${chatbotId}');
-  scriptEl.setAttribute('data-widget-origin', '${widgetUrl}');
   scriptEl.setAttribute('data-api-base', '${apiUrl}');
   scriptEl.setAttribute('data-position', '${config.position}');
   scriptEl.setAttribute('data-color', '${config.primaryColor}');
@@ -322,7 +318,6 @@ export class AppComponent implements OnInit, OnDestroy {
     this.scriptEl = this.renderer.createElement('script');
     this.scriptEl.src = '${widgetUrl}/widget.js';
     this.scriptEl.setAttribute('data-chatbot-id', '${chatbotId}');
-    this.scriptEl.setAttribute('data-widget-origin', '${widgetUrl}');
     this.scriptEl.setAttribute('data-api-base', '${apiUrl}');
     this.scriptEl.setAttribute('data-position', '${config.position}');
     this.scriptEl.setAttribute('data-color', '${config.primaryColor}');
@@ -531,7 +526,7 @@ ${keyLine}  -d '{
                 rows={4}
               />
               <p className="text-xs text-muted-foreground">
-                Mỗi domain trên một dòng. Để trống cho phép tất cả domain.
+                Mỗi domain trên một dòng. Backend sẽ kiểm tra origin thực tế của website theo whitelist này.
               </p>
             </div>
 
@@ -562,7 +557,7 @@ ${keyLine}  -d '{
                 placeholder="pub_widget_xxx"
               />
               <p className="text-xs text-muted-foreground">
-                Nếu thiết lập, widget sẽ gửi header <code>X-Widget-Key</code>. Backend sẽ kiểm tra key này.
+                Tùy chọn bổ sung nếu backend của bạn đang bật kiểm tra <code>X-Widget-Key</code>.
               </p>
             </div>
 
@@ -765,8 +760,8 @@ ${keyLine}  -d '{
               </div>
 
               <p className="text-xs text-muted-foreground">
-                Lưu ý: domain gọi API cần nằm trong <code>allowed_origins</code> của chatbot.
-                Nếu bật API key, bắt buộc gửi header <code>X-Widget-Key</code>. Nên lưu{" "}
+                Lưu ý: backend sẽ kiểm tra origin/IP thực tế của website theo whitelist trong <code>allowed_origins</code> và <code>allowed_ips</code>.
+                Nếu backend của bạn còn dùng API key, widget có thể gửi thêm header <code>X-Widget-Key</code>. Nên lưu{" "}
                 <code>conversation_id</code> để giữ ngữ cảnh hội thoại cho từng visitor.
               </p>
             </CardContent>

@@ -24,7 +24,6 @@
   const currentScript = document.currentScript;
   const config = {
     chatbotId: currentScript?.getAttribute('data-chatbot-id') || '',
-    widgetOrigin: currentScript?.getAttribute('data-widget-origin') || '',
     apiBase: currentScript?.getAttribute('data-api-base') || '',
     position: currentScript?.getAttribute('data-position') || 'bottom-right',
     primaryColor: currentScript?.getAttribute('data-color') || '#4f46e5',
