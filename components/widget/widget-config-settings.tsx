@@ -336,7 +336,7 @@ export class AppComponent implements OnInit, OnDestroy {
   };
 
   const getApiCurlSnippet = () => {
-    const endpoint = `${apiUrl}/public/widget/chat`;
+    const endpoint = `${apiUrl}/public/widget/${chatbotId}/chat`;
     const hasKey = !!config.publicApiKey;
     const keyLine = hasKey
       ? `  -H "X-Widget-Key: ${config.publicApiKey}" \\\n`
@@ -345,7 +345,6 @@ export class AppComponent implements OnInit, OnDestroy {
     return `curl -X POST "${endpoint}" \\
   -H "Content-Type: application/json" \\
 ${keyLine}  -d '{
-    "chatbotId": "${chatbotId}",
     "message": "Xin chào, cho tôi hỏi...",
     "conversation_id": null,
     "visitorId": "user-123"
@@ -722,14 +721,21 @@ ${keyLine}  -d '{
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-1 text-sm">
-                <p className="font-medium">Endpoint public (không cần đăng nhập)</p>
+                <p className="font-medium">Widget config API</p>
                 <code className="px-2 py-1 rounded bg-muted text-xs block">
-                  POST {apiUrl}/public/widget/chat
+                  GET {apiUrl}/public/widget/config/{chatbotId}
+                </code>
+              </div>
+
+              <div className="space-y-1 text-sm">
+                <p className="font-medium">Public chat API</p>
+                <code className="px-2 py-1 rounded bg-muted text-xs block">
+                  POST {apiUrl}/public/widget/{chatbotId}/chat
                 </code>
               </div>
 
               <div className="space-y-2 text-sm">
-                <p className="font-medium">Thông tin tích hợp</p>
+                <p className="font-medium">Integration info</p>
                 <ul className="text-xs text-muted-foreground space-y-1 list-disc pl-4">
                   <li>
                     <span className="font-medium text-foreground">Backend URL:</span>{" "}
@@ -741,28 +747,29 @@ ${keyLine}  -d '{
                   </li>
                   <li>
                     <span className="font-medium text-foreground">Widget API Key:</span>{" "}
-                    {config.publicApiKey ? config.publicApiKey : "Chưa bật"}
+                    {config.publicApiKey ? config.publicApiKey : "Not enabled"}
                   </li>
                   <li>
                     <span className="font-medium text-foreground">Allowed origins:</span>{" "}
                     {config.allowedOrigins.length > 0
                       ? config.allowedOrigins.join(", ")
-                      : "Không giới hạn (khuyến nghị nên cấu hình whitelist)"}
+                      : "No whitelist configured"}
                   </li>
                 </ul>
               </div>
 
               <div className="space-y-2">
-                <p className="text-sm font-medium">Ví dụ request (cURL)</p>
+                <p className="text-sm font-medium">Request example (cURL)</p>
                 <pre className="bg-muted p-4 rounded-lg text-xs overflow-x-auto max-h-80">
                   <code>{getApiCurlSnippet()}</code>
                 </pre>
               </div>
 
               <p className="text-xs text-muted-foreground">
-                Lưu ý: backend sẽ kiểm tra origin/IP thực tế của website theo whitelist trong <code>allowed_origins</code> và <code>allowed_ips</code>.
-                Nếu backend của bạn còn dùng API key, widget có thể gửi thêm header <code>X-Widget-Key</code>. Nên lưu{" "}
-                <code>conversation_id</code> để giữ ngữ cảnh hội thoại cho từng visitor.
+                Backend checks the real website origin and IP against <code>allowed_origins</code> and <code>allowed_ips</code>.
+                Because chatbot ID is now in the URL, the backend can resolve CORS and security rules per chatbot during preflight.
+                If your backend still uses an API key, the widget can also send <code>X-Widget-Key</code>. Store <code>conversation_id</code>
+                to keep visitor chat context.
               </p>
             </CardContent>
           </Card>
@@ -778,3 +785,6 @@ ${keyLine}  -d '{
     </div>
   );
 }
+
+
+

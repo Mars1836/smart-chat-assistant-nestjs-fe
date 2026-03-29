@@ -887,7 +887,6 @@
     try {
       // Build request body according to API spec
       const requestBody = {
-        chatbotId: config.chatbotId,
         message: message,
         visitorId: visitorId,
         metadata: {
@@ -910,7 +909,7 @@
         headers['X-Widget-Key'] = config.publicApiKey;
       }
 
-      const response = await fetch(`${config.apiBase}/public/widget/chat`, {
+      const response = await fetch(`${config.apiBase}/public/widget/${config.chatbotId}/chat`, {
         method: 'POST',
         headers,
         body: JSON.stringify(requestBody)
