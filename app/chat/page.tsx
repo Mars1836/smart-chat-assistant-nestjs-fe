@@ -247,10 +247,10 @@ export default function ChatPage() {
     }
   };
 
-  const loadConversations = async (workspaceId: string) => {
+  const loadConversations = async (chatbotId: string) => {
     try {
       setLoadingConversations(true);
-      const response = await conversationsApi.listByWorkspace(workspaceId, {
+      const response = await conversationsApi.listByChatbot(chatbotId, {
         page: 1,
         limit: 100,
         sortBy: "created_at",
@@ -272,8 +272,8 @@ export default function ChatPage() {
       setLoadingChatbot(true);
       const bot = await chatbotsApi.get(workspaceId, chatbotId);
       setCurrentChatbot(bot);
-      // Load conversations for this workspace
-      await loadConversations(workspaceId);
+      // Load conversations for the current chatbot only
+      await loadConversations(chatbotId);
       // Reset selected conversation and messages
       setSelectedConversationId(null);
       setCurrentConversation(null);
@@ -374,7 +374,7 @@ export default function ChatPage() {
       });
 
       // Reload conversations
-      await loadConversations(selectedWorkspaceId);
+      await loadConversations(currentChatbot.id);
 
       // Switch to new conversation
       await switchConversation(newConversation.id);
@@ -416,7 +416,7 @@ export default function ChatPage() {
         conversationId = newConversation.id;
         setSelectedConversationId(newConversation.id);
         setCurrentConversation(newConversation);
-        await loadConversations(selectedWorkspaceId);
+          await loadConversations(currentChatbot.id);
       } catch (err: any) {
         toast.error("Lỗi tạo cuộc hội thoại", {
           description:
@@ -464,6 +464,20 @@ export default function ChatPage() {
           conversationId,
           messageText
         );
+      }
+
+      if (response.conversation_id && response.conversation_id !== conversationId) {
+        setSelectedConversationId(response.conversation_id);
+        try {
+          const updatedConversation = await conversationsApi.get(
+            response.conversation_id
+          );
+          setCurrentConversation(updatedConversation);
+        } catch (err) {
+          console.error("Error loading updated conversation:", err);
+          setCurrentConversation(null);
+        }
+        await loadConversations(currentChatbot.id);
       }
 
       const aiMessage: Message = {

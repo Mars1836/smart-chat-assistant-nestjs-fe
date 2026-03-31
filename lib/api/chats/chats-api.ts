@@ -56,13 +56,15 @@ export const chatsApi = {
   sendMessageWithImages: async (
     workspaceId: string,
     chatbotId: string,
-    conversationId: string,
+    conversationId: string | null,
     message: string,
     images: File[]
   ): Promise<ChatResponseDto> => {
     const formData = new FormData();
     formData.append("message", message);
-    formData.append("conversation_id", conversationId);
+    if (conversationId) {
+      formData.append("conversation_id", conversationId);
+    }
 
     // Append each image
     images.forEach((image) => {

@@ -195,7 +195,7 @@ export function ChatbotChatDialog({
       loadHistory();
       setTimeout(() => inputRef.current?.focus(), 100);
     }
-  }, [open, chatbotId]);
+  }, [open, chatbotId, workspaceId]);
 
   const loadHistory = async () => {
     // Chat thử: luôn bắt đầu cuộc hội thoại mới, không load conversation cũ
@@ -261,6 +261,10 @@ export function ChatbotChatDialog({
           currentConversationId,
           userMessage.content
         );
+      }
+
+      if (response.conversation_id && response.conversation_id !== currentConversationId) {
+        setConversationId(response.conversation_id);
       }
 
       const aiMessage: Message = {
