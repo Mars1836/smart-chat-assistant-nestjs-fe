@@ -36,13 +36,13 @@ function AcceptInvitationContent() {
 
   useEffect(() => {
     if (!token) {
-      setError("Token khong hop le. Vui long kiem tra lai link trong email.");
+      setError("Token không hợp lệ. Vui lòng kiểm tra lại link trong email.");
     }
   }, [token]);
 
   const handleAcceptInvitation = async () => {
     if (!token) {
-      setError("Token khong hop le");
+      setError("Token không hợp lệ");
       return;
     }
 
@@ -54,7 +54,7 @@ function AcceptInvitationContent() {
       
       setSuccess(true);
       setWorkspaceName(response.workspace.name);
-      toast.success(`Chao mung ban den voi ${response.workspace.name}!`);
+      toast.success(`Chào mừng bạn đến với ${response.workspace.name}!`);
       
       // Persist selected workspace then redirect to the app's workspace-aware entrypoint
       setTimeout(() => {
@@ -64,18 +64,18 @@ function AcceptInvitationContent() {
       const errorMessage = err?.response?.data?.message;
       
       if (err?.response?.status === 400) {
-        setError("Email cua ban khong khop voi loi moi nay");
+        setError("Email của bạn không khớp với lời mời này");
       } else if (err?.response?.status === 404) {
-        setError("Loi moi khong ton tai");
+        setError("Lời mời không tồn tại");
       } else if (err?.response?.status === 409) {
-        setError("Ban da chap nhan loi moi nay roi hoac da la thanh vien cua workspace");
+        setError("Bạn đã chấp nhận lời mời này rồi hoặc đã là thành viên của workspace");
       } else if (err?.response?.status === 410) {
-        setError("Loi moi da het han. Vui long yeu cau gui lai loi moi moi.");
+        setError("Lời mời đã hết hạn. Vui lòng yêu cầu gửi lại lời mời mới.");
       } else {
-        setError(errorMessage || "Co loi xay ra khi chap nhan loi moi");
+        setError(errorMessage || "Có lỗi xảy ra khi chấp nhận lời mời");
       }
       
-      console.error("Error accepting invitation:", err);
+      console.error("Lỗi khi chấp nhận lời mời:", err);
     } finally {
       setIsLoading(false);
     }
@@ -94,19 +94,19 @@ function AcceptInvitationContent() {
         <Card className="border-0 shadow-lg">
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl">
-              {success ? "Thanh cong!" : "Loi moi tham gia Workspace"}
+              {success ? "Thành công!" : "Lời mời tham gia Workspace"}
             </CardTitle>
             <CardDescription>
               {success
-                ? `Ban da tham gia workspace "${workspaceName}"`
-                : "Chap nhan loi moi de tham gia workspace"}
+                ? `Bạn đã tham gia workspace "${workspaceName}"`
+                : "Chấp nhận lời mời để tham gia workspace"}
             </CardDescription>
           </CardHeader>
           <CardContent>
             {success ? (
               <div className="space-y-4">
                 <div className="text-center text-green-600 text-sm p-3 bg-green-50 rounded-md">
-                  Dang chuyen huong den workspace...
+                  Đang chuyển hướng đến workspace...
                 </div>
               </div>
             ) : (
@@ -119,7 +119,7 @@ function AcceptInvitationContent() {
 
                 {!error && token && (
                   <div className="text-sm text-muted-foreground bg-muted p-3 rounded-md">
-                    Nhan nut ben duoi de chap nhan loi moi tham gia workspace
+                    Nhấn nút bên dưới để chấp nhận lời mời tham gia workspace
                   </div>
                 )}
 
@@ -128,7 +128,7 @@ function AcceptInvitationContent() {
                   className="w-full h-10 bg-primary hover:bg-primary/90"
                   disabled={isLoading || !token || !!error}
                 >
-                  {isLoading ? "Dang xu ly..." : "Chap nhan loi moi"}
+                  {isLoading ? "Đang xử lý..." : "Chấp nhận lời mời"}
                 </Button>
 
                 <div className="mt-6 text-center text-sm">

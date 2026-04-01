@@ -449,7 +449,7 @@ export default function ChatPage() {
     setImagePreviews([]);
     setSending(true);
     setProcessingEvents([]);
-    setProcessingStatus("Dang xu ly...");
+    setProcessingStatus("Đang xử lý...");
 
     try {
       const streamController = new AbortController();
@@ -581,21 +581,21 @@ export default function ChatPage() {
       case "chat_started":
       case "planning":
       case "routing":
-        return "Dang xu ly...";
+        return "Đang xử lý...";
       case "tool_started":
-        return `Dang chay ${humanizeToolName(event.tool_name)}...`;
+        return `Đang chạy ${humanizeToolName(event.tool_name)}...`;
       case "tool_succeeded":
-        return `${humanizeToolName(event.tool_name)} da hoan tat`;
+        return `${humanizeToolName(event.tool_name)} đã hoàn thành`;
       case "tool_failed":
-        return `${humanizeToolName(event.tool_name)} that bai`;
+        return `${humanizeToolName(event.tool_name)} thất bại`;
       case "assistant_responding":
-        return "Dang tao cau tra loi...";
+        return "Đang tạo câu trả lời...";
       case "completed":
-        return "Da hoan tat";
+        return "Đã hoàn thành";
       case "failed":
-        return "Co loi khi xu ly";
+        return "Có lỗi khi xử lý";
       default:
-        return "Dang xu ly...";
+        return "Đang xử lý...";
     }
   };
 
@@ -1006,7 +1006,7 @@ export default function ChatPage() {
                 <Card className="max-w-md px-4 py-3 bg-muted border border-border">
                   <div className="flex items-center gap-2 text-sm font-medium">
                     <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                    <span>{processingStatus || "Dang xu ly..."}</span>
+                    <span>{processingStatus || "Đang xử lý..."}</span>
                   </div>
                   {processingEvents.length > 0 && (
                     <div className="mt-2 space-y-1">

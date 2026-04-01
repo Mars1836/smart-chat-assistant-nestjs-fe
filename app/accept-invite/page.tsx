@@ -122,7 +122,7 @@ function AcceptInviteContent() {
             <CardContent className="pt-6">
               <div className="flex flex-col items-center justify-center py-8">
                 <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-                <p className="text-muted-foreground">Dang kiem tra...</p>
+                <p className="text-muted-foreground">Đang kiểm tra...</p>
               </div>
             </CardContent>
           </Card>
@@ -144,34 +144,34 @@ function AcceptInviteContent() {
         <Card className="border-0 shadow-lg">
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl">
-              {status === "success" && "Thanh cong!"}
-              {status === "processing" && "Dang xu ly..."}
-              {status === "error" && "Khong the chap nhan loi moi"}
+              {status === "success" && "Thành công!"}
+              {status === "processing" && "Đang xử lý..."}
+              {status === "error" && "Không thể chấp nhận lời mời"}
             </CardTitle>
             <CardDescription>
-              {status === "success" && `Ban da tham gia workspace "${workspaceName}"`}
-              {status === "processing" && "Dang xu ly loi moi cua ban..."}
-              {status === "error" && "Da xay ra loi"}
+              {status === "success" && `Bạn đã tham gia workspace "${workspaceName}"`}
+              {status === "processing" && "Đang xử lý lời mời của bạn..."}
+              {status === "error" && "Đã xảy ra lỗi"}
             </CardDescription>
           </CardHeader>
           <CardContent>
             {status === "processing" && (
               <div className="flex flex-col items-center justify-center py-8">
                 <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-                <p className="text-muted-foreground">Dang xu ly...</p>
+                <p className="text-muted-foreground">Đang xử lý...</p>
               </div>
             )}
 
             {status === "success" && (
               <div className="space-y-4">
                 <div className="text-center text-green-600 text-sm p-3 bg-green-50 rounded-md">
-                  Dang chuyen huong den workspace...
+                  Đang chuyển hướng đến workspace...
                 </div>
                 <Button
                   onClick={() => redirectToWorkspaceChat(workspaceId)}
                   className="w-full h-10 bg-primary hover:bg-primary/90"
                 >
-                  Đi đến workspace ngay
+                  Đi đến workspace
                 </Button>
               </div>
             )}
@@ -185,7 +185,7 @@ function AcceptInviteContent() {
                   onClick={() => router.push("/")}
                   className="w-full h-10 bg-primary hover:bg-primary/90"
                 >
-                  Ve trang chu
+                  Quay về trang chủ
                 </Button>
               </div>
             )}
@@ -212,7 +212,7 @@ function LoadingFallback() {
           <CardContent className="pt-6">
             <div className="flex flex-col items-center justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-              <p className="text-muted-foreground">Dang tai...</p>
+              <p className="text-muted-foreground">Đang tải...</p>
             </div>
           </CardContent>
         </Card>
