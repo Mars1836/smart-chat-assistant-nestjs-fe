@@ -67,7 +67,7 @@ export {
 export { conversationsEndpoints } from "./conversations/endpoints";
 
 // Chats API
-export { chatsApi } from "./chats/chats-api";
+export { chatsApi, type ChatProcessingEvent } from "./chats/chats-api";
 export { chatsEndpoints } from "./chats/endpoints";
 // ChatDto and ChatResponseDto are exported from chatbots-api above
 

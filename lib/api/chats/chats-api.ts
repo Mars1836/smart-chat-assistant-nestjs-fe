@@ -5,9 +5,68 @@
 import client from "../client";
 import { chatsEndpoints } from "./endpoints";
 import type { ChatDto, ChatResponseDto } from "../chatbots/chatbots-api";
+import { fetchEventSource } from "@microsoft/fetch-event-source";
+import { tokenStorage } from "../token-storage";
+import { API_BASE_URL } from "@/lib/constants";
+
+export interface ChatProcessingEvent {
+  type:
+    | "chat_started"
+    | "planning"
+    | "routing"
+    | "tool_started"
+    | "tool_succeeded"
+    | "tool_failed"
+    | "assistant_responding"
+    | "completed"
+    | "failed";
+  conversation_id: string;
+  chatbot_id: string;
+  tool_name?: string;
+  step?: number;
+  message?: string;
+  timestamp?: string;
+}
 
 // API Functions
 export const chatsApi = {
+  streamConversationEvents: async (
+    workspaceId: string,
+    conversationId: string,
+    signal: AbortSignal,
+    onEvent: (event: ChatProcessingEvent) => void
+  ): Promise<void> => {
+    const token = tokenStorage.getAccessToken();
+    if (!token) {
+      throw new Error("Missing access token");
+    }
+
+    const url = `${API_BASE_URL}/workspaces/${workspaceId}/chatbots/conversations/${conversationId}/stream`;
+    await fetchEventSource(url, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      signal,
+      onmessage(event: { data: string }) {
+        if (!event.data) return;
+        try {
+          const parsed = JSON.parse(event.data) as ChatProcessingEvent;
+          if (parsed?.type) {
+            onEvent(parsed);
+          }
+        } catch (error) {
+          console.error("Failed to parse chat stream event", error);
+        }
+      },
+      onerror(error: unknown) {
+        if (signal.aborted) {
+          return;
+        }
+        throw error;
+      },
+    });
+  },
   /**
    * Send a chat message to chatbot
    * This endpoint sends a message to the chatbot and returns the response

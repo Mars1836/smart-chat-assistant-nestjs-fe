@@ -27,6 +27,7 @@ import {
   type UploadedImage,
   type MessageTokenUsage,
   type MessageToolUsed,
+  type ChatProcessingEvent,
 } from "@/lib/api";
 import { API_BASE_URL } from "@/lib/constants";
 import { FileIcon, Download } from "lucide-react";
@@ -123,6 +124,8 @@ export default function ChatPage() {
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [viewingImage, setViewingImage] = useState<string | null>(null);
   const [openDetailsId, setOpenDetailsId] = useState<string | null>(null);
+  const [processingEvents, setProcessingEvents] = useState<ChatProcessingEvent[]>([]);
+  const [processingStatus, setProcessingStatus] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -445,8 +448,30 @@ export default function ChatPage() {
     setSelectedImages([]);
     setImagePreviews([]);
     setSending(true);
+    setProcessingEvents([]);
+    setProcessingStatus("Dang xu ly...");
 
     try {
+      const streamController = new AbortController();
+      const streamPromise = chatsApi
+        .streamConversationEvents(
+          selectedWorkspaceId,
+          conversationId,
+          streamController.signal,
+          (event) => {
+            setProcessingEvents((prev) => [...prev, event]);
+            setProcessingStatus(mapEventToStatus(event));
+            if (event.type === "completed" || event.type === "failed") {
+              streamController.abort();
+            }
+          }
+        )
+        .catch((streamError) => {
+          if (!streamController.signal.aborted) {
+            console.error("Chat SSE stream error:", streamError);
+          }
+        });
+
       // Send message with or without images
       let response;
       if (currentImages.length > 0) {
@@ -491,6 +516,8 @@ export default function ChatPage() {
         tools_used: response.tools_used ?? undefined,
       };
       setMessages((prev) => [...prev, aiMessage]);
+      streamController.abort();
+      await streamPromise;
     } catch (err) {
       console.error("Error sending message:", err);
       const errObj = err as { response?: { data?: { message?: string } } };
@@ -504,6 +531,8 @@ export default function ChatPage() {
       setMessages((prev) => prev.slice(0, -1));
     } finally {
       setSending(false);
+      setProcessingStatus("");
+      setProcessingEvents([]);
     }
   };
 
@@ -534,6 +563,40 @@ export default function ChatPage() {
         ))}
       </div>
     );
+  };
+
+  const humanizeToolName = (toolName?: string) => {
+    if (!toolName) return "tool";
+    return (
+      toolName
+        .split("__")
+        .pop()
+        ?.replace(/_/g, " ")
+        .replace(/\b\w/g, (c) => c.toUpperCase()) ?? toolName
+    );
+  };
+
+  const mapEventToStatus = (event: ChatProcessingEvent) => {
+    switch (event.type) {
+      case "chat_started":
+      case "planning":
+      case "routing":
+        return "Dang xu ly...";
+      case "tool_started":
+        return `Dang chay ${humanizeToolName(event.tool_name)}...`;
+      case "tool_succeeded":
+        return `${humanizeToolName(event.tool_name)} da hoan tat`;
+      case "tool_failed":
+        return `${humanizeToolName(event.tool_name)} that bai`;
+      case "assistant_responding":
+        return "Dang tao cau tra loi...";
+      case "completed":
+        return "Da hoan tat";
+      case "failed":
+        return "Co loi khi xu ly";
+      default:
+        return "Dang xu ly...";
+    }
   };
 
   if (loading) {
@@ -936,6 +999,28 @@ export default function ChatPage() {
                     ))}
                   </div>
                 </div>
+              </div>
+            )}
+            {sending && (
+              <div className="flex justify-start">
+                <Card className="max-w-md px-4 py-3 bg-muted border border-border">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                    <span>{processingStatus || "Dang xu ly..."}</span>
+                  </div>
+                  {processingEvents.length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      {processingEvents.slice(-4).map((event, idx) => (
+                        <p
+                          key={`${event.timestamp ?? idx}-${event.type}-${idx}`}
+                          className="text-xs text-muted-foreground"
+                        >
+                          {mapEventToStatus(event)}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                </Card>
               </div>
             )}
           </div>

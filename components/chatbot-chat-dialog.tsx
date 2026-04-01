@@ -19,6 +19,7 @@ import {
   type UploadedImage,
   type MessageTokenUsage,
   type MessageToolUsed,
+  type ChatProcessingEvent,
 } from "@/lib/api";
 import { API_BASE_URL } from "@/lib/constants";
 import { MarkdownContent } from "@/components/markdown-content";
@@ -106,6 +107,8 @@ export function ChatbotChatDialog({
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [openDetailsId, setOpenDetailsId] = useState<string | null>(null);
+  const [processingEvents, setProcessingEvents] = useState<ChatProcessingEvent[]>([]);
+  const [processingStatus, setProcessingStatus] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -184,6 +187,40 @@ export function ChatbotChatDialog({
     return `${API_BASE_URL}${url}`;
   };
 
+  const humanizeToolName = (toolName?: string) => {
+    if (!toolName) return "tool";
+    return (
+      toolName
+        .split("__")
+        .pop()
+        ?.replace(/_/g, " ")
+        .replace(/\b\w/g, (c) => c.toUpperCase()) ?? toolName
+    );
+  };
+
+  const mapEventToStatus = (event: ChatProcessingEvent) => {
+    switch (event.type) {
+      case "chat_started":
+      case "planning":
+      case "routing":
+        return "Dang xu ly...";
+      case "tool_started":
+        return `Dang chay ${humanizeToolName(event.tool_name)}...`;
+      case "tool_succeeded":
+        return `${humanizeToolName(event.tool_name)} da hoan tat`;
+      case "tool_failed":
+        return `${humanizeToolName(event.tool_name)} that bai`;
+      case "assistant_responding":
+        return "Dang tao cau tra loi...";
+      case "completed":
+        return "Da hoan tat";
+      case "failed":
+        return "Co loi khi xu ly";
+      default:
+        return "Dang xu ly...";
+    }
+  };
+
   // Scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -230,6 +267,8 @@ export function ChatbotChatDialog({
     setSelectedImages([]);
     setImagePreviews([]);
     setSending(true);
+    setProcessingEvents([]);
+    setProcessingStatus("Dang xu ly...");
 
     try {
       let currentConversationId = conversationId;
@@ -243,6 +282,26 @@ export function ChatbotChatDialog({
         currentConversationId = newConversation.id;
         setConversationId(newConversation.id);
       }
+
+      const streamController = new AbortController();
+      const streamPromise = chatsApi
+        .streamConversationEvents(
+          workspaceId,
+          currentConversationId,
+          streamController.signal,
+          (event) => {
+            setProcessingEvents((prev) => [...prev, event]);
+            setProcessingStatus(mapEventToStatus(event));
+            if (event.type === "completed" || event.type === "failed") {
+              streamController.abort();
+            }
+          }
+        )
+        .catch((streamError) => {
+          if (!streamController.signal.aborted) {
+            console.error("Chat SSE stream error:", streamError);
+          }
+        });
 
       // Send message with or without images
       let response;
@@ -279,6 +338,8 @@ export function ChatbotChatDialog({
       };
 
       setMessages((prev) => [...prev, aiMessage]);
+      streamController.abort();
+      await streamPromise;
     } catch (err: any) {
       console.error("Error sending message:", err);
       const errorMessage =
@@ -296,6 +357,8 @@ export function ChatbotChatDialog({
       ]);
     } finally {
       setSending(false);
+      setProcessingStatus("");
+      setProcessingEvents([]);
       // Keep focus on input
       setTimeout(() => inputRef.current?.focus(), 100);
     }
@@ -518,10 +581,22 @@ export function ChatbotChatDialog({
               <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center mt-1 shrink-0">
                 <Bot className="w-3 h-3 text-primary" />
               </div>
-              <div className="bg-card border shadow-sm rounded-2xl rounded-bl-none px-4 py-2 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 bg-primary/40 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                <span className="w-1.5 h-1.5 bg-primary/40 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                <span className="w-1.5 h-1.5 bg-primary/40 rounded-full animate-bounce"></span>
+              <div className="bg-card border shadow-sm rounded-2xl rounded-bl-none px-4 py-2">
+                <p className="text-xs text-foreground font-medium">
+                  {processingStatus || "Dang xu ly..."}
+                </p>
+                {processingEvents.length > 0 && (
+                  <div className="mt-1 space-y-0.5">
+                    {processingEvents.slice(-3).map((event, idx) => (
+                      <p
+                        key={`${event.timestamp ?? idx}-${event.type}-${idx}`}
+                        className="text-[10px] text-muted-foreground"
+                      >
+                        {mapEventToStatus(event)}
+                      </p>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}
