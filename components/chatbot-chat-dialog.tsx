@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Loader2, Send, Bot, User, FileIcon, Download, ImagePlus, X, ChevronDown, ChevronUp } from "lucide-react";
 import {
   chatsApi,
+  chatbotsApi,
   conversationsApi,
   type ChatFile,
   type ChatCard,
@@ -109,6 +110,10 @@ export function ChatbotChatDialog({
   const [openDetailsId, setOpenDetailsId] = useState<string | null>(null);
   const [processingEvents, setProcessingEvents] = useState<ChatProcessingEvent[]>([]);
   const [processingStatus, setProcessingStatus] = useState("");
+  const [starterButtons, setStarterButtons] = useState<
+    Array<{ label: string; message: string }>
+  >([]);
+  const [greetingMessage, setGreetingMessage] = useState<string>("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -236,21 +241,32 @@ export function ChatbotChatDialog({
 
   const loadHistory = async () => {
     // Chat thử: luôn bắt đầu cuộc hội thoại mới, không load conversation cũ
+    try {
+      const bot = await chatbotsApi.get(workspaceId, chatbotId);
+      setStarterButtons(bot.conversation_starters ?? []);
+      setGreetingMessage(bot.greeting_message || "");
+    } catch (err) {
+      console.error("Error loading chatbot detail:", err);
+      setStarterButtons([]);
+      setGreetingMessage("");
+    }
     setMessages([]);
     setConversationId(null);
   };
 
-  const handleSendMessage = async () => {
-    if ((!inputValue.trim() && selectedImages.length === 0) || sending) return;
+  const handleSendMessage = async (starterMessage?: string) => {
+    const outgoingMessage = starterMessage ?? inputValue.trim();
+    if ((!outgoingMessage && selectedImages.length === 0) || sending) return;
 
     // Store current images for the message
-    const currentImages = [...selectedImages];
-    const currentPreviews = [...imagePreviews];
+    const useSelectedImages = typeof starterMessage !== "string";
+    const currentImages = useSelectedImages ? [...selectedImages] : [];
+    const currentPreviews = useSelectedImages ? [...imagePreviews] : [];
 
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
-      content: inputValue,
+      content: outgoingMessage,
       timestamp: new Date(),
       // Store preview URLs for display
       userImages: currentPreviews.map((preview, index) => ({
@@ -380,10 +396,31 @@ export function ChatbotChatDialog({
         {/* Messages Area */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-muted/20">
           {messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-4">
-              <Bot className="w-12 h-12 mb-3 opacity-20" />
-              <p className="text-sm font-medium">Bắt đầu trò chuyện với {chatbotName}</p>
-              <p className="text-xs mt-1">Chatbot có thể sử dụng các plugin đã được kích hoạt.</p>
+            <div className="flex flex-col h-full text-muted-foreground p-2">
+              <div className="flex-1 flex flex-col items-center justify-center text-center px-2">
+                <Bot className="w-12 h-12 mb-3 opacity-20" />
+                <p className="text-sm font-medium">
+                {greetingMessage || `Bắt đầu trò chuyện với ${chatbotName}`}
+                </p>
+              </div>
+              {starterButtons.length > 0 && (
+                <div className="w-full flex justify-end">
+                  <div className="w-full max-w-md flex flex-wrap justify-end gap-2.5">
+                    {starterButtons.map((starter, index) => (
+                      <Button
+                        key={`${starter.label}-${index}`}
+                        type="button"
+                        variant="outline"
+                        className="h-auto min-h-12 max-w-[260px] justify-start whitespace-normal text-left px-4 py-2.5 text-sm font-medium leading-snug rounded-2xl border-border/70 bg-background/70 text-foreground hover:bg-muted/70 hover:border-border hover:text-foreground"
+                        onClick={() => handleSendMessage(starter.message)}
+                        disabled={sending}
+                      >
+                        {starter.label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             messages.map((message) => (
@@ -662,7 +699,7 @@ export function ChatbotChatDialog({
               autoComplete="off"
             />
             <Button
-              onClick={handleSendMessage}
+              onClick={() => handleSendMessage()}
               disabled={(!inputValue.trim() && selectedImages.length === 0) || sending}
               size="icon"
               className={sending ? "opacity-50" : ""}

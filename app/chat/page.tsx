@@ -138,7 +138,9 @@ export default function ChatPage() {
   };
 
   const starterButtons = currentChatbot?.conversation_starters ?? [];
-  const hasConversationMessages = messages.some((message) => message.id !== "welcome");
+  const hasConversationMessages = messages.some(
+    (message) => message.role === "user"
+  );
   const shouldShowStarterButtons =
     !!currentChatbot &&
     starterButtons.length > 0 &&
@@ -979,18 +981,14 @@ export default function ChatPage() {
 
             {shouldShowStarterButtons && (
               <div className="flex justify-start">
-                <div className="max-w-md">
-                  <p className="text-xs text-muted-foreground mb-2">
-                    Bat dau nhanh:
-                  </p>
-                  <div className="flex flex-wrap gap-2">
+                <div className="w-full max-w-2xl">
+                  <div className="flex flex-wrap gap-2.5">
                     {starterButtons.map((starter, index) => (
                       <Button
                         key={`${starter.label}-${index}`}
                         type="button"
                         variant="outline"
-                        size="sm"
-                        className="h-auto whitespace-normal text-left"
+                        className="h-auto min-h-14 max-w-[280px] justify-start whitespace-normal text-left px-4 py-3 text-sm font-medium leading-snug rounded-2xl border-border/70 bg-background/70 text-foreground hover:bg-muted/70 hover:border-border hover:text-foreground"
                         onClick={() => handleSendMessage(starter.message)}
                         disabled={!currentChatbot?.enabled || sending}
                       >
