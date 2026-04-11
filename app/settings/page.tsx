@@ -19,6 +19,7 @@ import { useWorkspace } from "@/lib/stores/workspace-store";
 import { toast } from "sonner";
 import {
   workspacesApi,
+  tokenStorage,
   type WorkspaceWallet,
   type WorkspaceVietQRTopup,
 } from "@/lib/api";
@@ -86,13 +87,19 @@ export default function WorkspaceSettingsPage() {
     fetchWallet();
   }, [selectedWorkspace]);
 
-  // Subscribe to wallet SSE stream while on settings page (billing/topup)
+  // Subscribe to wallet SSE — EventSource không gửi Authorization; backend nhận JWT qua ?access_token=
   useEffect(() => {
     if (!selectedWorkspace) {
       return;
     }
 
-    const url = `${API_BASE_URL}/workspaces/${selectedWorkspace.id}/billing/wallet/stream`;
+    const accessToken = tokenStorage.getAccessToken();
+    if (!accessToken) {
+      return;
+    }
+
+    const base = `${API_BASE_URL}/workspaces/${selectedWorkspace.id}/billing/wallet/stream`;
+    const url = `${base}?access_token=${encodeURIComponent(accessToken)}`;
     const es = new EventSource(url);
 
     es.onmessage = (event) => {
@@ -100,22 +107,25 @@ export default function WorkspaceSettingsPage() {
         const data = JSON.parse(event.data) as WorkspaceWallet;
         setWallet(data);
 
-        // Detect topup success: balance tăng lên so với trước
         setLastWalletBalance((prev) => {
           if (prev !== null && data.balance > prev) {
-            // Chỉ thông báo khi đang trong phiên topup (vừa tạo QR)
-            // và chưa thông báo cho balance này trước đó
-            if (topupSessionRef.current && lastToastBalanceRef.current !== data.balance) {
+            if (
+              topupSessionRef.current &&
+              lastToastBalanceRef.current !== data.balance
+            ) {
               setTopupSuccess(true);
               lastToastBalanceRef.current = data.balance;
               topupSessionRef.current = false;
 
-              toast.success(t("settings.createQrSuccess"), {
-                description: translateTemplate(t("settings.topupSuccessDescription"), {
-                  balance: data.balance.toLocaleString(
-                    locale === "vi" ? "vi-VN" : "en-US"
-                  ),
-                }),
+              toast.success(t("settings.paymentReceived"), {
+                description: translateTemplate(
+                  t("settings.topupSuccessDescription"),
+                  {
+                    balance: data.balance.toLocaleString(
+                      locale === "vi" ? "vi-VN" : "en-US"
+                    ),
+                  }
+                ),
               });
             }
           }
@@ -136,7 +146,7 @@ export default function WorkspaceSettingsPage() {
     return () => {
       es.close();
     };
-  }, [selectedWorkspace]);
+  }, [selectedWorkspace, t, locale]);
 
   const handleUpdate = async () => {
     if (!selectedWorkspace) return;
