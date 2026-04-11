@@ -25,6 +25,11 @@ const dictionaries: Record<Locale, Dictionary> = {
     "common.settings": "Cài đặt",
     "common.language": "Ngôn ngữ",
 
+    "docs.customPlugin.title": "Tài liệu Custom Plugin (generic_api)",
+    "docs.customPlugin.subtitle":
+      "Hướng dẫn tạo tool HTTP tùy chỉnh cho workspace.",
+    "docs.customPlugin.backToPlugins": "Quay lại Plugins",
+
     "layout.chat": "Chat",
     "layout.team": "Nhóm",
     "layout.chatbots": "Chatbots",
@@ -225,6 +230,7 @@ const dictionaries: Record<Locale, Dictionary> = {
     "plugins.description": "Quản lý các plugin cho workspace của bạn",
     "plugins.import": "Import Plugin",
     "plugins.createTool": "Tạo Tool",
+    "plugins.customPluginDocs": "Tài liệu Custom Plugin",
     "plugins.search": "Tìm kiếm plugin...",
     "plugins.category": "Danh mục",
     "plugins.allTypes": "Tất cả loại",
@@ -395,6 +401,11 @@ const dictionaries: Record<Locale, Dictionary> = {
     "common.signOut": "Sign out",
     "common.settings": "Settings",
     "common.language": "Language",
+
+    "docs.customPlugin.title": "Custom plugin guide (generic_api)",
+    "docs.customPlugin.subtitle":
+      "How to define HTTP tools for your workspace.",
+    "docs.customPlugin.backToPlugins": "Back to Plugins",
 
     "layout.chat": "Chat",
     "layout.team": "Team",
@@ -597,6 +608,7 @@ const dictionaries: Record<Locale, Dictionary> = {
     "plugins.description": "Manage plugins for your workspace",
     "plugins.import": "Import Plugin",
     "plugins.createTool": "Create Tool",
+    "plugins.customPluginDocs": "Custom plugin guide",
     "plugins.search": "Search plugins...",
     "plugins.category": "Category",
     "plugins.allTypes": "All Types",

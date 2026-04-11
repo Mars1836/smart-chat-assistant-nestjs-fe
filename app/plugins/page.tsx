@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import {
   Loader2,
   Plus,
@@ -51,6 +52,7 @@ import {
   Filter,
   ArrowUpDown,
   Upload,
+  BookOpen,
 } from "lucide-react";
 import { useWorkspace } from "@/lib/stores/workspace-store";
 import {
@@ -408,7 +410,13 @@ function PluginsContent() {
         </div>
 
         {/* Create Tool & Import Plugin */}
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button variant="outline" className="gap-2" asChild>
+            <Link href="/docs/custom-plugin">
+              <BookOpen className="w-4 h-4" />
+              {t("plugins.customPluginDocs")}
+            </Link>
+          </Button>
           <Button
             variant="outline"
             onClick={() => setImportPluginDialogOpen(true)}
