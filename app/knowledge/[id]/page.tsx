@@ -12,6 +12,7 @@ import { ArrowLeft, Loader2, Upload, Trash2, Edit } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
+import { formatFileSize, toSafeNumber } from "@/lib/utils/format-size";
 
 // Since this is a client component, we can unscramble params using use() hook if we wanted, 
 // but Next.js 13/14 client components receive params directly as prop if defined in page.tsx 
@@ -48,15 +49,7 @@ function KnowledgeDetailContent({ id }: { id: string }) {
     return {
       documents: docs.length,
       chunks: docs.reduce((sum, d) => sum + (d.chunk_count ?? 0), 0),
-      sizeBytes: docs.reduce((sum, d) => {
-        const n =
-          typeof d.size === "number"
-            ? d.size
-            : typeof d.size === "string"
-              ? Number(d.size)
-              : 0;
-        return sum + (Number.isFinite(n) ? n : 0);
-      }, 0),
+      sizeBytes: docs.reduce((sum, d) => sum + toSafeNumber(d.size), 0),
     };
   }, [knowledge]);
 
@@ -201,7 +194,7 @@ function KnowledgeDetailContent({ id }: { id: string }) {
                 </div>
                 <div className="bg-muted/50 rounded-lg px-4 py-2 text-center">
                     <div className="text-sm font-medium text-muted-foreground">Size</div>
-                    <div className="text-xl font-bold">{(computedTotals.sizeBytes / 1024 / 1024).toFixed(1)} MB</div>
+                    <div className="text-xl font-bold">{formatFileSize(computedTotals.sizeBytes)}</div>
                 </div>
             </div>
           </div>

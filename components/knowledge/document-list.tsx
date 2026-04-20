@@ -12,6 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { formatFileSize } from "@/lib/utils/format-size";
 
 interface DocumentListProps {
   documents: Document[];
@@ -111,7 +112,7 @@ export function DocumentList({
                   </div>
                 </TableCell>
                 <TableCell className="text-muted-foreground text-sm">
-                  {(doc.size / 1024).toFixed(1)} KB
+                  {formatFileSize(doc.size)}
                 </TableCell>
                 <TableCell className="text-muted-foreground text-sm">
                   {doc.chunk_count}

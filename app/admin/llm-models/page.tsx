@@ -57,6 +57,13 @@ const defaultCreateForm: CreateLlmModelDto = {
   display_name: "",
 };
 
+/** Hiển thị giá token: làm tròn hàng đơn vị, không phần thập phân */
+function formatPriceWholeUnit(value: string | number | undefined | null): string {
+  const n = typeof value === "number" ? value : parseFloat(String(value ?? ""));
+  if (Number.isNaN(n)) return "0";
+  return String(Math.round(n));
+}
+
 export default function AdminLlmModelsPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading, isSystemAdmin } = useAuth();
@@ -117,8 +124,12 @@ export default function AdminLlmModelsPage() {
   const openEdit = (m: LlmModel) => {
     setTargetModel(m);
     setEditForm({
-      price_per_1k_input_tokens: parseFloat(m.price_per_1k_input_tokens) || 0,
-      price_per_1k_output_tokens: parseFloat(m.price_per_1k_output_tokens) || 0,
+      price_per_1k_input_tokens: Math.round(
+        parseFloat(m.price_per_1k_input_tokens) || 0
+      ),
+      price_per_1k_output_tokens: Math.round(
+        parseFloat(m.price_per_1k_output_tokens) || 0
+      ),
       display_name: m.display_name ?? undefined,
     });
     setEditOpen(true);
@@ -282,10 +293,10 @@ export default function AdminLlmModelsPage() {
                           </TableCell>
                           <TableCell>{m.provider}</TableCell>
                           <TableCell className="text-right font-mono text-sm">
-                            {m.price_per_1k_input_tokens}
+                            {formatPriceWholeUnit(m.price_per_1k_input_tokens)}
                           </TableCell>
                           <TableCell className="text-right font-mono text-sm">
-                            {m.price_per_1k_output_tokens}
+                            {formatPriceWholeUnit(m.price_per_1k_output_tokens)}
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-2">

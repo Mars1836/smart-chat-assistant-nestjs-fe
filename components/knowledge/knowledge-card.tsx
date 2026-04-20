@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { KnowledgeBase } from "@/lib/api/knowledge";
 import { formatDistanceToNow } from "date-fns";
+import { formatFileSize, toSafeNumber } from "@/lib/utils/format-size";
 
 interface KnowledgeCardProps {
   knowledge: KnowledgeBase;
@@ -20,6 +21,9 @@ interface KnowledgeCardProps {
 }
 
 export function KnowledgeCard({ knowledge, onDelete, onClick }: KnowledgeCardProps) {
+  const documentCount = toSafeNumber(knowledge.document_count);
+  const totalChunks = toSafeNumber(knowledge.total_chunks);
+
   return (
     <Card 
       className="relative cursor-pointer hover:border-primary/50 transition-colors"
@@ -37,12 +41,12 @@ export function KnowledgeCard({ knowledge, onDelete, onClick }: KnowledgeCardPro
               
               <div className="flex items-center gap-2 mt-4 text-xs text-muted-foreground flex-wrap">
                 <Badge variant="secondary" className="font-normal">
-                  {knowledge.document_count} document{knowledge.document_count !== 1 ? 's' : ''}
+                  {documentCount} document{documentCount !== 1 ? "s" : ""}
                 </Badge>
                 •
-                <span>{knowledge.total_chunks} chunks</span>
+                <span>{totalChunks} chunks</span>
                 •
-                <span>{(knowledge.total_size / 1024 / 1024).toFixed(1)} MB</span>
+                <span>{formatFileSize(knowledge.total_size)}</span>
               </div>
               
               <div className="mt-2 text-xs text-muted-foreground">
