@@ -47,6 +47,24 @@ function formatAmount(amount: string, locale: "vi" | "en"): string {
   return n >= 0 ? `+${formatted}` : formatted;
 }
 
+function resolveCreditAmount(tx: BillingTransaction): string {
+  return tx.credit_amount ?? tx.amount;
+}
+
+function resolveTokenAmount(tx: BillingTransaction): string | null {
+  if (tx.token_amount != null) return tx.token_amount;
+
+  if (tx.type === "usage") {
+    const input = tx.input_tokens ?? 0;
+    const output = tx.output_tokens ?? 0;
+    if (input !== 0 || output !== 0) {
+      return `${-(input + output)}`;
+    }
+  }
+
+  return null;
+}
+
 function typeLabel(type: string, t: (key: string) => string): string {
   const map: Record<string, string> = {
     topup: t("billing.type.topup"),
@@ -189,15 +207,14 @@ export default function BillingPage() {
                         <TableHead>{t("billing.type")}</TableHead>
                         <TableHead className="text-right">{t("billing.credit")}</TableHead>
                         <TableHead>{t("billing.descriptionCol")}</TableHead>
-                        <TableHead className="text-right">{t("billing.inputTokens")}</TableHead>
-                        <TableHead className="text-right">{t("billing.outputTokens")}</TableHead>
+                        <TableHead className="text-right">{t("billing.tokenAmount")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {transactions.length === 0 ? (
                         <TableRow>
                           <TableCell
-                            colSpan={7}
+                            colSpan={6}
                             className="text-center text-muted-foreground py-8"
                           >
                             {t("billing.noTransactions")}
@@ -219,21 +236,18 @@ export default function BillingPage() {
                             <TableCell>{typeLabel(tx.type, t)}</TableCell>
                             <TableCell
                               className={`text-right font-mono ${
-                                parseFloat(tx.amount) >= 0
+                                parseFloat(resolveCreditAmount(tx)) >= 0
                                   ? "text-green-600 dark:text-green-400"
                                   : "text-red-600 dark:text-red-400"
                               }`}
                             >
-                              {formatAmount(tx.amount, locale)}
+                              {formatAmount(resolveCreditAmount(tx), locale)}
                             </TableCell>
                             <TableCell className="max-w-[280px] truncate text-sm">
                               {tx.description || "—"}
                             </TableCell>
                             <TableCell className="text-right text-muted-foreground">
-                              {tx.input_tokens != null ? tx.input_tokens : "—"}
-                            </TableCell>
-                            <TableCell className="text-right text-muted-foreground">
-                              {tx.output_tokens != null ? tx.output_tokens : "—"}
+                              {resolveTokenAmount(tx) ?? "—"}
                             </TableCell>
                           </TableRow>
                         ))

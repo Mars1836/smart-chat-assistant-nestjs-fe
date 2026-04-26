@@ -70,7 +70,14 @@ export interface BillingTransaction {
   user_id: string | null;
   user: BillingTransactionUser | null;
   type: "topup" | "usage" | "refund" | "adjustment";
+  /** Credits amount (normalized across all transaction types) */
   amount: string;
+  /** Credits amount (explicit field for FE clarity) */
+  credit_amount?: string | null;
+  /** Token usage amount (usage only, usually negative), optional for non-usage */
+  token_amount?: string | null;
+  /** Unit for amount/credit_amount, now always "credits" */
+  amount_unit?: "credits" | string | null;
   description: string | null;
   llm_provider: string | null;
   llm_model: string | null;
