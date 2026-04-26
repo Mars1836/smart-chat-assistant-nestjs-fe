@@ -12,13 +12,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { 
   Loader2, 
   Book, 
-  FileText, 
   Database,
-  ArrowUp
 } from "lucide-react";
 import {
   knowledgeApi,
@@ -85,11 +82,6 @@ export function ChatbotKnowledgeDialog({
     return connected?.is_enabled ?? false;
   };
 
-  const getKbPriority = (kbId: string): number => {
-    const connected = getConnectedKb(kbId);
-    return connected?.priority ?? 10;
-  };
-
   const handleToggleKb = async (kb: KnowledgeBase, enabled: boolean) => {
     try {
       setUpdating(kb.id);
@@ -134,29 +126,6 @@ export function ChatbotKnowledgeDialog({
       });
     } finally {
       setUpdating(null);
-    }
-  };
-
-  const handleUpdatePriority = async (kbId: string, priority: number) => {
-    try {
-      if (isNaN(priority) || priority < 0) return;
-      
-      const connected = getConnectedKb(kbId);
-      if (!connected) return;
-
-      await knowledgeApi.updateChatbotKnowledge(workspaceId, chatbotId, kbId, {
-        priority,
-      });
-
-      // Update local state
-      setChatbotKnowledge(prev => prev.map(item => 
-        item.knowledge.id === kbId ? { ...item, priority } : item
-      ));
-
-      toast.success("Đã cập nhật độ ưu tiên");
-    } catch (err: any) {
-      console.error("Error updating priority:", err);
-      toast.error("Không thể cập nhật độ ưu tiên");
     }
   };
 
@@ -239,20 +208,6 @@ export function ChatbotKnowledgeDialog({
                           {kb.description || "Không có mô tả"}
                         </p>
                       </div>
-
-                      {isEnabled && connected && (
-                        <div className="flex items-center gap-2 mr-2">
-                          <span className="text-xs text-muted-foreground">Priority:</span>
-                          <Input 
-                             type="number"
-                             min="0"
-                             className="w-16 h-8 text-xs"
-                             defaultValue={connected.priority}
-                             onBlur={(e) => handleUpdatePriority(kb.id, parseInt(e.target.value))}
-                             disabled={!canAssignKnowledge}
-                          />
-                        </div>
-                      )}
 
                       <div className="flex items-center gap-2">
                         {isUpdating && (

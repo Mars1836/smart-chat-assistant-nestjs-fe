@@ -581,25 +581,6 @@ export default function ChatbotsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">
-                    {t("chatbots.temperature")}
-                  </label>
-                  <Input
-                    type="number"
-                    min="0"
-                    max="1"
-                    step="0.1"
-                    value={formData.temperature}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        temperature: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                  />
-                </div>
-
-                <div className="space-y-2">
                   <label className="text-sm font-medium">{t("chatbots.maxTokens")}</label>
                   <Input
                     type="number"

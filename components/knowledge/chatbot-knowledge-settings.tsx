@@ -8,7 +8,6 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
-import { Input } from "@/components/ui/input";
 
 interface ChatbotKnowledgeSettingsProps {
   chatbotId: string;
@@ -69,12 +68,6 @@ export function ChatbotKnowledgeSettings({ chatbotId }: ChatbotKnowledgeSettings
     });
   };
 
-  const handlePriorityChange = (knowledgeId: string, priority: number) => {
-    setChatbotKnowledge(prev => 
-      prev.map(k => k.knowledge.id === knowledgeId ? { ...k, priority } : k)
-    );
-  };
-
   const handleSave = async () => {
     if (!selectedWorkspace) return;
     try {
@@ -128,8 +121,6 @@ export function ChatbotKnowledgeSettings({ chatbotId }: ChatbotKnowledgeSettings
         {allKnowledge.map(kb => {
           const assigned = chatbotKnowledge.find(k => k.knowledge.id === kb.id);
           const isEnabled = assigned?.is_enabled ?? false;
-          const priority = assigned?.priority ?? 0;
-
           return (
             <Card key={kb.id} className={isEnabled ? "border-primary/50" : ""}>
               <CardContent className="p-4 flex items-center gap-4">
@@ -150,18 +141,6 @@ export function ChatbotKnowledgeSettings({ chatbotId }: ChatbotKnowledgeSettings
                     {kb.document_count} docs • {kb.total_chunks} chunks
                   </div>
                 </div>
-
-                {isEnabled && (
-                    <div className="flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground">Priority:</span>
-                        <Input 
-                            type="number" 
-                            className="w-20 h-8" 
-                            value={priority}
-                            onChange={(e) => handlePriorityChange(kb.id, parseInt(e.target.value) || 0)}
-                        />
-                    </div>
-                )}
               </CardContent>
             </Card>
           );
