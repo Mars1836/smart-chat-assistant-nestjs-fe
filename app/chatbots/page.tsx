@@ -241,7 +241,7 @@ export default function ChatbotsPage() {
       setSubmitting(true);
       setError("");
 
-      const payload = {
+      const basePayload = {
         ...formData,
         conversation_starters: (formData.conversation_starters ?? [])
           .map((starter) => ({
@@ -250,6 +250,13 @@ export default function ChatbotsPage() {
           }))
           .filter((starter) => starter.label && starter.message),
       };
+
+      const payload = editingChatbot
+        ? basePayload
+        : (() => {
+            const { llm_provider, ...createPayload } = basePayload;
+            return createPayload;
+          })();
 
       const promise = editingChatbot
         ? chatbotsApi.update(

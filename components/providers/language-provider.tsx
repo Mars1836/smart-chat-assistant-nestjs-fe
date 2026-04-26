@@ -325,14 +325,14 @@ const dictionaries: Record<Locale, Dictionary> = {
     "chatbots.llmModel": "Model LLM",
     "chatbots.temperature": "Temperature (0-1)",
     "chatbots.maxTokens": "Max Tokens",
-    "chatbots.starters": "Câu mở đầu",
+    "chatbots.starters": "Câu mở đầu (Conversation Starters)",
     "chatbots.startersDescription":
       "Hiển thị các nút gợi ý dưới lời chào khi chưa có tin nhắn.",
-    "chatbots.addStarter": "Thêm starter",
+    "chatbots.addStarter": "Thêm câu mở đầu (Add starter)",
     "chatbots.noStarters":
-      "Chưa có starter nào. Nếu để trống, backend sẽ dùng default starters cho chatbot mới.",
-    "chatbots.label": "Nhãn",
-    "chatbots.message": "Tin nhắn",
+      "Chưa có câu mở đầu (starter) nào. Nếu để trống, backend sẽ dùng default starters cho chatbot mới.",
+    "chatbots.label": "Nhãn (Label)",
+    "chatbots.message": "Tin nhắn (Message)",
     "chatbots.placeholder.name": "Trợ lý của tôi",
     "chatbots.placeholder.personality":
       "Bạn là trợ lý thông minh, nhiệt tình và chuyên nghiệp",
@@ -706,14 +706,14 @@ const dictionaries: Record<Locale, Dictionary> = {
     "chatbots.llmModel": "LLM Model",
     "chatbots.temperature": "Temperature (0-1)",
     "chatbots.maxTokens": "Max Tokens",
-    "chatbots.starters": "Conversation Starters",
+    "chatbots.starters": "Conversation Starters (Câu mở đầu)",
     "chatbots.startersDescription":
       "Show suggestion buttons below the greeting before the first message.",
-    "chatbots.addStarter": "Add starter",
+    "chatbots.addStarter": "Add starter (Thêm câu mở đầu)",
     "chatbots.noStarters":
-      "No starters yet. If left empty, the backend will use default starters for new chatbots.",
-    "chatbots.label": "Label",
-    "chatbots.message": "Message",
+      "No starters yet (Chưa có câu mở đầu). If left empty, the backend will use default starters for new chatbots.",
+    "chatbots.label": "Label (Nhãn)",
+    "chatbots.message": "Message (Tin nhắn)",
     "chatbots.placeholder.name": "My Assistant Bot",
     "chatbots.placeholder.personality":
       "You are a smart, enthusiastic, and professional assistant",
@@ -808,7 +808,7 @@ Object.assign(dictionaries.vi, {
   "chatbots.createSuccessDescription": "Chatbot \"{name}\" đã được tạo",
   "chatbots.updateSuccessDescription": "Chatbot \"{name}\" đã được cập nhật",
   "chatbots.deleteSuccessDescription": "Chatbot \"{name}\" đã được xóa",
-  "chatbots.starterNumber": "Starter {number}",
+  "chatbots.starterNumber": "Câu mở đầu (Starter) {number}",
   "chatbotTools.permissionDenied":
     "Bạn không có quyền cập nhật plugin cho chatbot này.",
   "toolActions.loadFailed": "Không thể tải danh sách actions",
@@ -868,7 +868,7 @@ Object.assign(dictionaries.en, {
   "chatbots.createSuccessDescription": "Chatbot \"{name}\" has been created",
   "chatbots.updateSuccessDescription": "Chatbot \"{name}\" has been updated",
   "chatbots.deleteSuccessDescription": "Chatbot \"{name}\" has been deleted",
-  "chatbots.starterNumber": "Starter {number}",
+  "chatbots.starterNumber": "Starter (Câu mở đầu) {number}",
   "chatbotTools.permissionDenied":
     "You do not have permission to update plugins for this chatbot.",
   "toolActions.loadFailed": "Failed to load actions",
