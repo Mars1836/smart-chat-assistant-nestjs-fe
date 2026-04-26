@@ -187,6 +187,12 @@ export interface ChatResponseDto {
   tools_used?: ChatResponseToolUsed[] | null;
 }
 
+export interface SpeechToTextResponseDto {
+  text: string;
+  provider: string;
+  model: string;
+}
+
 export interface ListChatbotsParams {
   page?: number;
   limit?: number;
@@ -331,6 +337,30 @@ export const chatbotsApi = {
     const response = await client.get(
       chatbotsEndpoints.testConnection(workspaceId)
     );
+    return response.data;
+  },
+
+  /**
+   * Speech-to-text for chatbot audio input
+   */
+  speechToText: async (
+    workspaceId: string,
+    chatbotId: string,
+    audio: Blob
+  ): Promise<SpeechToTextResponseDto> => {
+    const formData = new FormData();
+    formData.append("audio", audio, "recording.webm");
+
+    const response = await client.post<SpeechToTextResponseDto>(
+      chatbotsEndpoints.speechStt(workspaceId, chatbotId),
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+
     return response.data;
   },
 };

@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Send, Bot, User, FileIcon, Download, ImagePlus, X, ChevronDown, ChevronUp } from "lucide-react";
+import { Loader2, Send, Bot, User, FileIcon, Download, ImagePlus, X, ChevronDown, ChevronUp, Mic, Square } from "lucide-react";
 import {
   chatsApi,
   chatbotsApi,
@@ -114,12 +114,41 @@ export function ChatbotChatDialog({
     Array<{ label: string; message: string }>
   >([]);
   const [greetingMessage, setGreetingMessage] = useState<string>("");
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordingChunksRef = useRef<Blob[]>([]);
+  const recordingStreamRef = useRef<MediaStream | null>(null);
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const MAX_IMAGES = 5;
   const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+
+  const formatRecordingTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+      .toString()
+      .padStart(2, "0");
+    const secs = (seconds % 60).toString().padStart(2, "0");
+    return `${mins}:${secs}`;
+  };
+
+  const clearRecordingTimer = () => {
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+  };
+
+  const stopRecordingTracks = () => {
+    if (recordingStreamRef.current) {
+      recordingStreamRef.current.getTracks().forEach((track) => track.stop());
+      recordingStreamRef.current = null;
+    }
+  };
 
   // Add images with validation
   const addImages = (files: File[]) => {
@@ -184,8 +213,94 @@ export function ChatbotChatDialog({
   useEffect(() => {
     return () => {
       imagePreviews.forEach((url) => URL.revokeObjectURL(url));
+      clearRecordingTimer();
+      stopRecordingTracks();
     };
   }, [imagePreviews]);
+
+  const transcribeAudio = async (audioBlob: Blob) => {
+    setIsTranscribing(true);
+    try {
+      const sttResponse = await chatbotsApi.speechToText(
+        workspaceId,
+        chatbotId,
+        audioBlob
+      );
+      const text = sttResponse.text?.trim();
+
+      if (!text) {
+        toast.error("Không nhận diện được nội dung giọng nói");
+        return;
+      }
+
+      setInputValue(text);
+      await handleSendMessage(text);
+    } catch (err: any) {
+      console.error("Error transcribing audio:", err);
+      toast.error("Không thể chuyển giọng nói thành văn bản", {
+        description: err?.response?.data?.message || "Unknown error",
+      });
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
+  const handleStartRecording = async () => {
+    if (sending || isTranscribing || isRecording) return;
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      recordingStreamRef.current = stream;
+      mediaRecorderRef.current = recorder;
+      recordingChunksRef.current = [];
+      setRecordingSeconds(0);
+      setIsRecording(true);
+
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingSeconds((prev) => prev + 1);
+      }, 1000);
+
+      recorder.ondataavailable = (event: BlobEvent) => {
+        if (event.data && event.data.size > 0) {
+          recordingChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onstop = async () => {
+        clearRecordingTimer();
+        stopRecordingTracks();
+        setIsRecording(false);
+
+        const audioBlob = new Blob(recordingChunksRef.current, {
+          type: recorder.mimeType || "audio/webm",
+        });
+        recordingChunksRef.current = [];
+
+        if (!audioBlob.size) {
+          toast.error("Không nhận diện được nội dung giọng nói");
+          return;
+        }
+
+        await transcribeAudio(audioBlob);
+      };
+
+      recorder.start();
+    } catch (err) {
+      console.error("Error starting recording:", err);
+      toast.error("Không thể truy cập micro. Vui lòng kiểm tra quyền truy cập.");
+      clearRecordingTimer();
+      stopRecordingTracks();
+      setIsRecording(false);
+    }
+  };
+
+  const handleStopRecording = () => {
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== "inactive") {
+      recorder.stop();
+    }
+  };
 
   const getFileUrl = (url: string) => {
     if (url.startsWith("http")) return url;
@@ -256,7 +371,7 @@ export function ChatbotChatDialog({
 
   const handleSendMessage = async (starterMessage?: string) => {
     const outgoingMessage = starterMessage ?? inputValue.trim();
-    if ((!outgoingMessage && selectedImages.length === 0) || sending) return;
+    if ((!outgoingMessage && selectedImages.length === 0) || sending || isTranscribing) return;
 
     // Store current images for the message
     const useSelectedImages = typeof starterMessage !== "string";
@@ -413,7 +528,7 @@ export function ChatbotChatDialog({
                         variant="outline"
                         className="h-auto min-h-12 max-w-[260px] justify-start whitespace-normal text-left px-4 py-2.5 text-sm font-medium leading-snug rounded-2xl border-border/70 bg-background/70 text-foreground hover:bg-muted/70 hover:border-border hover:text-foreground"
                         onClick={() => handleSendMessage(starter.message)}
-                        disabled={sending}
+                        disabled={sending || isTranscribing || isRecording}
                       >
                         {starter.label}
                       </Button>
@@ -680,10 +795,19 @@ export function ChatbotChatDialog({
               variant="outline"
               size="icon"
               onClick={() => fileInputRef.current?.click()}
-              disabled={sending || selectedImages.length >= MAX_IMAGES}
+              disabled={sending || isTranscribing || isRecording || selectedImages.length >= MAX_IMAGES}
               title="Đính kèm ảnh (hoặc paste Ctrl+V)"
             >
               <ImagePlus className="w-4 h-4" />
+            </Button>
+            <Button
+              variant={isRecording ? "destructive" : "outline"}
+              size="icon"
+              onClick={isRecording ? handleStopRecording : handleStartRecording}
+              disabled={sending || isTranscribing}
+              title={isRecording ? "Dừng ghi âm" : "Ghi âm"}
+            >
+              {isRecording ? <Square className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
             </Button>
             <Input
               ref={inputRef}
@@ -694,23 +818,30 @@ export function ChatbotChatDialog({
                 e.key === "Enter" && !e.shiftKey && handleSendMessage()
               }
               onPaste={handlePaste}
-              disabled={sending}
+              disabled={sending || isTranscribing}
               className="flex-1"
               autoComplete="off"
             />
             <Button
               onClick={() => handleSendMessage()}
-              disabled={(!inputValue.trim() && selectedImages.length === 0) || sending}
+              disabled={(!inputValue.trim() && selectedImages.length === 0) || sending || isTranscribing}
               size="icon"
-              className={sending ? "opacity-50" : ""}
+              className={sending || isTranscribing ? "opacity-50" : ""}
             >
-              {sending ? (
+              {sending || isTranscribing ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <Send className="w-4 h-4" />
               )}
             </Button>
           </div>
+          {(isRecording || isTranscribing) && (
+            <div className="mt-2 text-xs text-muted-foreground">
+              {isRecording
+                ? `Đang ghi âm: ${formatRecordingTime(recordingSeconds)}`
+                : "Đang nhận diện giọng nói..."}
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

@@ -15,6 +15,8 @@ export const chatbotsEndpoints = {
     `${CHATBOTS_BASE(workspaceId)}/${id}`,
   chat: (workspaceId: string, id: string) =>
     `${CHATBOTS_BASE(workspaceId)}/${id}/chat`,
+  speechStt: (workspaceId: string, id: string) =>
+    `${CHATBOTS_BASE(workspaceId)}/${id}/speech/stt`,
   listModels: (workspaceId: string) => `${CHATBOTS_BASE(workspaceId)}/_/models`,
   testConnection: (workspaceId: string) =>
     `${CHATBOTS_BASE(workspaceId)}/_/test`,

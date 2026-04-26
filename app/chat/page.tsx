@@ -10,7 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Send, Loader2, Bot, ChevronDown, Check, ImagePlus, X, ChevronUp } from "lucide-react";
+import { Plus, Send, Loader2, Bot, ChevronDown, Check, ImagePlus, X, ChevronUp, Mic, Square } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import {
   chatbotsApi,
@@ -126,11 +126,40 @@ export default function ChatPage() {
   const [openDetailsId, setOpenDetailsId] = useState<string | null>(null);
   const [processingEvents, setProcessingEvents] = useState<ChatProcessingEvent[]>([]);
   const [processingStatus, setProcessingStatus] = useState<string>("");
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordingChunksRef = useRef<Blob[]>([]);
+  const recordingStreamRef = useRef<MediaStream | null>(null);
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const MAX_IMAGES = 5;
   const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+
+  const formatRecordingTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+      .toString()
+      .padStart(2, "0");
+    const secs = (seconds % 60).toString().padStart(2, "0");
+    return `${mins}:${secs}`;
+  };
+
+  const clearRecordingTimer = () => {
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+  };
+
+  const stopRecordingTracks = () => {
+    if (recordingStreamRef.current) {
+      recordingStreamRef.current.getTracks().forEach((track) => track.stop());
+      recordingStreamRef.current = null;
+    }
+  };
 
   const getFileUrl = (url: string) => {
     if (url.startsWith("http")) return url;
@@ -146,7 +175,9 @@ export default function ChatPage() {
     starterButtons.length > 0 &&
     !hasConversationMessages &&
     !loadingMessages &&
-    !sending;
+    !sending &&
+    !isRecording &&
+    !isTranscribing;
 
   // Add images with validation
   const addImages = (files: File[]) => {
@@ -208,6 +239,98 @@ export default function ChatPage() {
 
   // Note: We don't revoke blob URLs automatically because they are used in message history
   // They will be cleaned up when the page is navigated away
+  useEffect(() => {
+    return () => {
+      clearRecordingTimer();
+      stopRecordingTracks();
+    };
+  }, []);
+
+  const transcribeAudio = async (audioBlob: Blob) => {
+    if (!selectedWorkspaceId || !currentChatbot) return;
+
+    setIsTranscribing(true);
+    try {
+      const sttResponse = await chatbotsApi.speechToText(
+        selectedWorkspaceId,
+        currentChatbot.id,
+        audioBlob
+      );
+      const text = sttResponse.text?.trim();
+
+      if (!text) {
+        toast.error("Không nhận diện được nội dung giọng nói");
+        return;
+      }
+
+      setInputValue(text);
+      await handleSendMessage(text);
+    } catch (err: any) {
+      console.error("Error transcribing audio:", err);
+      toast.error("Không thể chuyển giọng nói thành văn bản", {
+        description: err?.response?.data?.message || "Unknown error",
+      });
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
+  const handleStartRecording = async () => {
+    if (!currentChatbot?.enabled || sending || isTranscribing || isRecording) return;
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      recordingStreamRef.current = stream;
+      mediaRecorderRef.current = recorder;
+      recordingChunksRef.current = [];
+      setRecordingSeconds(0);
+      setIsRecording(true);
+
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingSeconds((prev) => prev + 1);
+      }, 1000);
+
+      recorder.ondataavailable = (event: BlobEvent) => {
+        if (event.data && event.data.size > 0) {
+          recordingChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onstop = async () => {
+        clearRecordingTimer();
+        stopRecordingTracks();
+        setIsRecording(false);
+
+        const audioBlob = new Blob(recordingChunksRef.current, {
+          type: recorder.mimeType || "audio/webm",
+        });
+        recordingChunksRef.current = [];
+
+        if (!audioBlob.size) {
+          toast.error("Không nhận diện được nội dung giọng nói");
+          return;
+        }
+
+        await transcribeAudio(audioBlob);
+      };
+
+      recorder.start();
+    } catch (err) {
+      console.error("Error starting recording:", err);
+      toast.error("Không thể truy cập micro. Vui lòng kiểm tra quyền truy cập.");
+      clearRecordingTimer();
+      stopRecordingTracks();
+      setIsRecording(false);
+    }
+  };
+
+  const handleStopRecording = () => {
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== "inactive") {
+      recorder.stop();
+    }
+  };
 
   // Load workspaces on mount
   useEffect(() => {
@@ -401,7 +524,8 @@ export default function ChatPage() {
       (!outgoingMessage && selectedImages.length === 0) ||
       !selectedWorkspaceId ||
       !currentChatbot ||
-      sending
+      sending ||
+      isTranscribing
     )
       return;
 
@@ -990,7 +1114,7 @@ export default function ChatPage() {
                         variant="outline"
                         className="h-auto min-h-14 max-w-[280px] justify-start whitespace-normal text-left px-4 py-3 text-sm font-medium leading-snug rounded-2xl border-border/70 bg-background/70 text-foreground hover:bg-muted/70 hover:border-border hover:text-foreground"
                         onClick={() => handleSendMessage(starter.message)}
-                        disabled={!currentChatbot?.enabled || sending}
+                        disabled={!currentChatbot?.enabled || sending || isRecording || isTranscribing}
                       >
                         {starter.label}
                       </Button>
@@ -1068,10 +1192,25 @@ export default function ChatPage() {
                 variant="outline"
                 size="icon"
                 onClick={() => fileInputRef.current?.click()}
-                disabled={sending || !currentChatbot?.enabled || selectedImages.length >= MAX_IMAGES}
+                disabled={
+                  sending ||
+                  isRecording ||
+                  isTranscribing ||
+                  !currentChatbot?.enabled ||
+                  selectedImages.length >= MAX_IMAGES
+                }
                 title="Đính kèm ảnh (hoặc paste Ctrl+V)"
               >
                 <ImagePlus className="w-4 h-4" />
+              </Button>
+              <Button
+                variant={isRecording ? "destructive" : "outline"}
+                size="icon"
+                onClick={isRecording ? handleStopRecording : handleStartRecording}
+                disabled={sending || isTranscribing || !currentChatbot?.enabled}
+                title={isRecording ? "Dừng ghi âm" : "Ghi âm"}
+              >
+                {isRecording ? <Square className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
               </Button>
               <Input
                 ref={inputRef}
@@ -1087,22 +1226,32 @@ export default function ChatPage() {
                 }
                 onPaste={handlePaste}
                 className="flex-1 h-10"
-                disabled={sending || !currentChatbot?.enabled}
+                disabled={sending || isTranscribing || !currentChatbot?.enabled}
               />
               <Button
                 onClick={() => handleSendMessage()}
                 className="bg-primary hover:bg-primary/90 gap-2"
                 disabled={
-                  sending || (!inputValue.trim() && selectedImages.length === 0) || !currentChatbot?.enabled
+                  sending ||
+                  isTranscribing ||
+                  (!inputValue.trim() && selectedImages.length === 0) ||
+                  !currentChatbot?.enabled
                 }
               >
-                {sending ? (
+                {sending || isTranscribing ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   <Send className="w-4 h-4" />
                 )}
               </Button>
             </div>
+            {(isRecording || isTranscribing) && (
+              <div className="mt-2 text-xs text-muted-foreground">
+                {isRecording
+                  ? `Đang ghi âm: ${formatRecordingTime(recordingSeconds)}`
+                  : "Đang nhận diện giọng nói..."}
+              </div>
+            )}
             {error && (
               <div className="mt-2 text-sm text-destructive">{error}</div>
             )}
