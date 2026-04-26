@@ -12,7 +12,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { KnowledgeBase } from "@/lib/api/knowledge";
 import { formatDistanceToNow } from "date-fns";
+import { vi as localeVi } from "date-fns/locale";
 import { formatFileSize, toSafeNumber } from "@/lib/utils/format-size";
+import { useLanguage } from "@/components/providers/language-provider";
 
 interface KnowledgeCardProps {
   knowledge: KnowledgeBase;
@@ -21,6 +23,7 @@ interface KnowledgeCardProps {
 }
 
 export function KnowledgeCard({ knowledge, onDelete, onClick }: KnowledgeCardProps) {
+  const { locale } = useLanguage();
   const documentCount = toSafeNumber(knowledge.document_count);
   const totalChunks = toSafeNumber(knowledge.total_chunks);
 
@@ -50,7 +53,10 @@ export function KnowledgeCard({ knowledge, onDelete, onClick }: KnowledgeCardPro
               </div>
               
               <div className="mt-2 text-xs text-muted-foreground">
-                Created {formatDistanceToNow(new Date(knowledge.created_at))} ago
+                {formatDistanceToNow(new Date(knowledge.created_at), {
+                  addSuffix: true,
+                  ...(locale === "vi" ? { locale: localeVi } : {}),
+                })}
               </div>
             </div>
           </div>
