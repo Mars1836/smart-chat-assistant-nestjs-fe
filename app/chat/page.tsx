@@ -14,11 +14,9 @@ import { Plus, Send, Loader2, Bot, ChevronDown, Check, ImagePlus, X, ChevronUp, 
 import { useState, useEffect, useRef } from "react";
 import {
   chatbotsApi,
-  workspacesApi,
   conversationsApi,
   chatsApi,
   messagesApi,
-  type WorkspaceResponseDto,
   type Chatbot,
   type ConversationResponseDto,
   type MessageResponseDto,
@@ -34,6 +32,7 @@ import { FileIcon, Download } from "lucide-react";
 import { toast } from "sonner";
 import { ImageViewer } from "@/components/image-viewer";
 import { MarkdownContent } from "@/components/markdown-content";
+import { useWorkspace } from "@/lib/stores/workspace-store";
 
 interface Message {
   id: string;
@@ -98,7 +97,7 @@ function ToolUsedBlock({ tool }: { tool: MessageToolUsed }) {
 }
 
 export default function ChatPage() {
-  const [workspaces, setWorkspaces] = useState<WorkspaceResponseDto[]>([]);
+  const { selectedWorkspace } = useWorkspace();
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(
     null
   );
@@ -332,29 +331,27 @@ export default function ChatPage() {
     }
   };
 
-  // Load workspaces on mount
+  // Sync chat data with currently selected workspace
   useEffect(() => {
-    loadWorkspaces();
-  }, []);
+    const workspaceId = selectedWorkspace?.id ?? null;
 
-  const loadWorkspaces = async () => {
-    try {
-      setLoading(true);
-      const response = await workspacesApi.list();
-      setWorkspaces(response.data);
-      if (response.data.length > 0) {
-        setSelectedWorkspaceId(response.data[0].id);
-        await loadChatbots(response.data[0].id);
-      }
-    } catch (err) {
-      const message = (err as { response?: { data?: { message?: string } } })
-        ?.response?.data?.message;
-      setError(message || "Failed to load workspaces");
-      console.error("Error loading workspaces:", err);
-    } finally {
+    setSelectedWorkspaceId(workspaceId);
+    setSelectedConversationId(null);
+    setCurrentConversation(null);
+    setConversations([]);
+    setChatbots([]);
+    setCurrentChatbot(null);
+    setMessages([]);
+    setError("");
+
+    if (!workspaceId) {
       setLoading(false);
+      return;
     }
-  };
+
+    setLoading(true);
+    loadChatbots(workspaceId).finally(() => setLoading(false));
+  }, [selectedWorkspace?.id]);
 
   const loadChatbots = async (workspaceId: string) => {
     try {
