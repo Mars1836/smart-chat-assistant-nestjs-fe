@@ -512,25 +512,6 @@ export default function ChatbotsPage() {
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium">
-                    {t("chatbots.threshold")}
-                  </label>
-                  <Input
-                    type="number"
-                    min="0"
-                    max="1"
-                    step="0.1"
-                    value={formData.confidence_threshold}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        confidence_threshold: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">
                     {t("chatbots.maxContextTurns")}
                   </label>
                   <Input
