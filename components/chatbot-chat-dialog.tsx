@@ -24,6 +24,7 @@ import {
 } from "@/lib/api";
 import { API_BASE_URL } from "@/lib/constants";
 import { MarkdownContent } from "@/components/markdown-content";
+import { ImageViewer } from "@/components/image-viewer";
 
 interface ChatbotChatDialogProps {
   open: boolean;
@@ -117,6 +118,7 @@ export function ChatbotChatDialog({
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [viewingImage, setViewingImage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -341,6 +343,40 @@ export function ChatbotChatDialog({
     }
   };
 
+  const renderImages = (images: { url: string; name?: string }[]) => {
+    if (!images.length) return null;
+
+    return (
+      <div
+        className={`grid gap-1.5 mb-1 ${
+          images.length === 1
+            ? "grid-cols-1"
+            : images.length === 2
+            ? "grid-cols-2"
+            : "grid-cols-2"
+        }`}
+      >
+        {images.map((img, index) => (
+          <div
+            key={index}
+            className={`relative overflow-hidden rounded-lg cursor-zoom-in border border-border bg-muted ${
+              images.length % 2 !== 0 && index === 0 && images.length > 1
+                ? "col-span-2"
+                : ""
+            }`}
+            onClick={() => setViewingImage(img.url)}
+          >
+            <img
+              src={img.url}
+              alt={img.name || "Attached image"}
+              className="w-full h-auto object-cover max-h-[300px] hover:opacity-90 transition-opacity duration-200"
+            />
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   // Scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -538,195 +574,236 @@ export function ChatbotChatDialog({
               )}
             </div>
           ) : (
-            messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex gap-2 ${
-                  message.role === "user" ? "justify-end" : "justify-start"
-                }`}
-              >
-                {message.role === "assistant" && (
-                  <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center mt-1 shrink-0">
-                    <Bot className="w-3 h-3 text-primary" />
-                  </div>
-                )}
+            messages.map((message) => {
+              const displayImages: { url: string; name?: string }[] = [];
+              if (message.userImages) {
+                message.userImages.forEach((img) =>
+                  displayImages.push({ url: img.url, name: img.filename })
+                );
+              }
+              if (message.files) {
+                message.files.forEach((file) => {
+                  if (file.type === "image") {
+                    displayImages.push({
+                      url: getFileUrl(file.url),
+                      name: file.filename,
+                    });
+                  }
+                });
+              }
+              const otherFiles = message.files?.filter((f) => f.type !== "image") || [];
+
+              return (
                 <div
-                  className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm group ${
-                    message.role === "user"
-                      ? "bg-primary text-primary-foreground rounded-br-none"
-                      : message.isError 
-                        ? "bg-destructive/10 text-destructive border border-destructive/20 rounded-bl-none"
-                        : "bg-card border shadow-sm rounded-bl-none"
+                  key={message.id}
+                  className={`flex gap-2 ${
+                    message.role === "user" ? "justify-end" : "justify-start"
                   }`}
                 >
-                  {message.role === "assistant" ? (
-                    <MarkdownContent content={message.content} />
-                  ) : (
-                    <p className="whitespace-pre-wrap">{message.content}</p>
-                  )}
-                  
-                  {/* Display user uploaded images */}
-                  {message.userImages && message.userImages.length > 0 && (
-                    <div className="mt-2 grid grid-cols-2 gap-2">
-                      {message.userImages.map((img, index) => (
-                        <div key={index} className="rounded-lg overflow-hidden border">
-                          <img
-                            src={img.url}
-                            alt={img.filename}
-                            className="w-full h-auto max-h-[150px] object-cover"
-                          />
-                        </div>
-                      ))}
+                  {message.role === "assistant" && (
+                    <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center mt-1 shrink-0">
+                      <Bot className="w-3 h-3 text-primary" />
                     </div>
                   )}
-                  
-                  {message.files && message.files.length > 0 && (
-                    <div className="mt-3 space-y-2">
-                      {message.files.map((file, index) => {
-                        if (file.type === "image") {
-                          return (
-                            <div key={index} className="rounded-lg overflow-hidden border">
-                              <img 
-                                src={getFileUrl(file.url)} 
-                                alt={file.filename}
-                                className="w-full h-auto max-h-[300px] object-contain bg-background"
-                              />
-                            </div>
-                          );
-                        }
-                        return (
-                          <div key={index} className="flex items-center gap-3 p-3 rounded-lg border bg-background/50 hover:bg-background transition-colors">
-                            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                              <FileIcon className="w-5 h-5 text-primary" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium truncate text-sm">{file.filename}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {file.size ? `${(file.size / 1024).toFixed(1)} KB` : "Unknown size"}
-                              </p>
-                            </div>
-                            <a 
-                              href={getFileUrl(file.url)} 
-                              download={file.filename}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-muted transition-colors"
+
+                  <div
+                    className={`max-w-[85%] flex flex-col ${
+                      message.role === "user" ? "items-end" : "items-start"
+                    }`}
+                  >
+                    {renderImages(displayImages)}
+
+                    <div
+                      className={`rounded-2xl px-3 py-2 text-sm group w-full ${
+                        message.role === "user"
+                          ? "bg-primary text-primary-foreground rounded-br-none"
+                          : message.isError
+                          ? "bg-destructive/10 text-destructive border border-destructive/20 rounded-bl-none"
+                          : "bg-card border shadow-sm rounded-bl-none"
+                      }`}
+                    >
+                      {message.role === "assistant" ? (
+                        <MarkdownContent content={message.content} />
+                      ) : (
+                        <p className="whitespace-pre-wrap">{message.content}</p>
+                      )}
+
+                      {otherFiles.length > 0 && (
+                        <div className="mt-3 space-y-2">
+                          {otherFiles.map((file, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center gap-3 p-3 rounded-lg border bg-background/50 hover:bg-background transition-colors"
                             >
-                              <Download className="w-4 h-4 text-muted-foreground" />
-                            </a>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                  {message.cards && message.cards.length > 0 && (
-                    <div className="mt-3 grid grid-cols-1 gap-2">
-                      {message.cards.map((card, index) => (
-                        <a
-                          key={index}
-                          href={card.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className={`flex gap-3 rounded-lg border bg-background/80 hover:bg-background hover:border-primary/30 transition-colors overflow-hidden text-left ${
-                            card.type === "product" ? "border-amber-200/50" : card.type === "article" ? "border-blue-200/50" : ""
-                          }`}
-                        >
-                          {card.imageUrl && (
-                            <div className="w-20 h-20 shrink-0 bg-muted">
-                              <img
-                                src={card.imageUrl}
-                                alt={card.title || card.name || ""}
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
-                          )}
-                          <div className="flex-1 min-w-0 py-2 pr-2">
-                            <p className="font-medium text-sm line-clamp-1">{card.title || card.name || ""}</p>
-                            {(card.description || (card.type === "product" && (card.metadata?.brand ?? card.brand))) && (
-                              <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
-                                {card.description || (card.type === "product" ? (card.metadata?.brand ?? card.brand) : "")}
-                              </p>
-                            )}
-                            {card.type === "product" && (card.metadata?.price != null || card.price != null) && (
-                              <p className="text-xs font-medium text-amber-700 dark:text-amber-400 mt-1">
-                                {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format((card.metadata?.price ?? card.price)!)}
-                              </p>
-                            )}
-                            {card.type === "article" && (card.metadata?.author || card.metadata?.publishedAt) && (
-                              <p className="text-[10px] text-muted-foreground mt-1">
-                                {[card.metadata.author, card.metadata.publishedAt].filter(Boolean).join(" · ")}
-                              </p>
-                            )}
-                            <p className="text-[10px] text-muted-foreground mt-1 truncate" title={card.url}>
-                              {card.metadata?.displayLink ?? (() => {
-                                try { const u = new URL(card.url); return u.hostname + (u.pathname !== "/" ? u.pathname : ""); } catch { return card.url; }
-                              })()}
-                            </p>
-                          </div>
-                        </a>
-                      ))}
-                    </div>
-                  )}
-                  {/* Nút Chi tiết (token & tools) cho tin nhắn bot */}
-                  {message.role === "assistant" && !message.isError && (
-                    <div className="mt-1.5">
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground">
-                        <span>
-                          {(message.token_usage?.input_tokens ?? 0) + (message.token_usage?.output_tokens ?? 0)} tokens
-                        </span>
-                        <span>{message.tools_used?.length ?? 0} tool(s)</span>
-                        <button
-                          type="button"
-                          className="text-primary hover:underline inline-flex items-center gap-0.5 font-medium"
-                          onClick={() => setOpenDetailsId((id) => (id === message.id ? null : message.id))}
-                        >
-                          {openDetailsId === message.id ? (
-                            <>Thu gọn <ChevronUp className="w-3 h-3" /></>
-                          ) : (
-                            <>Chi tiết <ChevronDown className="w-3 h-3" /></>
-                          )}
-                        </button>
-                      </div>
-                      {openDetailsId === message.id && (
-                        <div className="mt-2 rounded-lg border bg-muted/50 p-2.5 text-xs space-y-2">
-                          <div>
-                            <p className="font-medium mb-1">Token usage</p>
-                            <div className="font-mono text-muted-foreground space-y-0.5">
-                              <p>Input: {message.token_usage?.input_tokens ?? 0}</p>
-                              <p>Output: {message.token_usage?.output_tokens ?? 0}</p>
-                              <p className="border-t border-border pt-1 mt-1">
-                                Total: {(message.token_usage?.input_tokens ?? 0) + (message.token_usage?.output_tokens ?? 0)}
-                              </p>
-                            </div>
-                          </div>
-                          <div>
-                            <p className="font-medium mb-1">Tools used ({message.tools_used?.length ?? 0})</p>
-                            {(message.tools_used?.length ?? 0) > 0 && (
-                              <div className="space-y-2">
-                                {message.tools_used!.map((tool, idx) => (
-                                  <ToolUsedBlock key={idx} tool={tool} />
-                                ))}
+                              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                                <FileIcon className="w-5 h-5 text-primary" />
                               </div>
-                            )}
-                          </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium truncate text-sm">{file.filename}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {file.size ? `${(file.size / 1024).toFixed(1)} KB` : "Unknown size"}
+                                </p>
+                              </div>
+                              <a
+                                href={getFileUrl(file.url)}
+                                download={file.filename}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-muted transition-colors"
+                              >
+                                <Download className="w-4 h-4 text-muted-foreground" />
+                              </a>
+                            </div>
+                          ))}
                         </div>
                       )}
+
+                      {message.cards && message.cards.length > 0 && (
+                        <div className="mt-3 grid grid-cols-1 gap-2">
+                          {message.cards.map((card, index) => (
+                            <a
+                              key={index}
+                              href={card.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`flex gap-3 rounded-lg border bg-background/80 hover:bg-background hover:border-primary/30 transition-colors overflow-hidden text-left ${
+                                card.type === "product"
+                                  ? "border-amber-200/50"
+                                  : card.type === "article"
+                                  ? "border-blue-200/50"
+                                  : ""
+                              }`}
+                            >
+                              {card.imageUrl && (
+                                <div className="w-20 h-20 shrink-0 bg-muted">
+                                  <img
+                                    src={card.imageUrl}
+                                    alt={card.title || card.name || ""}
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0 py-2 pr-2">
+                                <p className="font-medium text-sm line-clamp-1">{card.title || card.name || ""}</p>
+                                {(card.description ||
+                                  (card.type === "product" &&
+                                    (card.metadata?.brand ?? card.brand))) && (
+                                  <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
+                                    {card.description ||
+                                      (card.type === "product"
+                                        ? (card.metadata?.brand ?? card.brand)
+                                        : "")}
+                                  </p>
+                                )}
+                                {card.type === "product" &&
+                                  (card.metadata?.price != null || card.price != null) && (
+                                    <p className="text-xs font-medium text-amber-700 dark:text-amber-400 mt-1">
+                                      {new Intl.NumberFormat("vi-VN", {
+                                        style: "currency",
+                                        currency: "VND",
+                                      }).format((card.metadata?.price ?? card.price)!)}
+                                    </p>
+                                  )}
+                                {card.type === "article" &&
+                                  (card.metadata?.author || card.metadata?.publishedAt) && (
+                                    <p className="text-[10px] text-muted-foreground mt-1">
+                                      {[card.metadata.author, card.metadata.publishedAt]
+                                        .filter(Boolean)
+                                        .join(" · ")}
+                                    </p>
+                                  )}
+                                <p className="text-[10px] text-muted-foreground mt-1 truncate" title={card.url}>
+                                  {card.metadata?.displayLink ??
+                                    (() => {
+                                      try {
+                                        const u = new URL(card.url);
+                                        return u.hostname + (u.pathname !== "/" ? u.pathname : "");
+                                      } catch {
+                                        return card.url;
+                                      }
+                                    })()}
+                                </p>
+                              </div>
+                            </a>
+                          ))}
+                        </div>
+                      )}
+
+                      {message.role === "assistant" && !message.isError && (
+                        <div className="mt-1.5">
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground">
+                            <span>
+                              {(message.token_usage?.input_tokens ?? 0) +
+                                (message.token_usage?.output_tokens ?? 0)}{" "}
+                              tokens
+                            </span>
+                            <span>{message.tools_used?.length ?? 0} tool(s)</span>
+                            <button
+                              type="button"
+                              className="text-primary hover:underline inline-flex items-center gap-0.5 font-medium"
+                              onClick={() =>
+                                setOpenDetailsId((id) => (id === message.id ? null : message.id))
+                              }
+                            >
+                              {openDetailsId === message.id ? (
+                                <>
+                                  Thu gọn <ChevronUp className="w-3 h-3" />
+                                </>
+                              ) : (
+                                <>
+                                  Chi tiết <ChevronDown className="w-3 h-3" />
+                                </>
+                              )}
+                            </button>
+                          </div>
+                          {openDetailsId === message.id && (
+                            <div className="mt-2 rounded-lg border bg-muted/50 p-2.5 text-xs space-y-2">
+                              <div>
+                                <p className="font-medium mb-1">Token usage</p>
+                                <div className="font-mono text-muted-foreground space-y-0.5">
+                                  <p>Input: {message.token_usage?.input_tokens ?? 0}</p>
+                                  <p>Output: {message.token_usage?.output_tokens ?? 0}</p>
+                                  <p className="border-t border-border pt-1 mt-1">
+                                    Total:{" "}
+                                    {(message.token_usage?.input_tokens ?? 0) +
+                                      (message.token_usage?.output_tokens ?? 0)}
+                                  </p>
+                                </div>
+                              </div>
+                              <div>
+                                <p className="font-medium mb-1">
+                                  Tools used ({message.tools_used?.length ?? 0})
+                                </p>
+                                {(message.tools_used?.length ?? 0) > 0 && (
+                                  <div className="space-y-2">
+                                    {message.tools_used!.map((tool, idx) => (
+                                      <ToolUsedBlock key={idx} tool={tool} />
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      <p className="text-[10px] text-right mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {message.timestamp.toLocaleTimeString("vi-VN", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    </div>
+                  </div>
+
+                  {message.role === "user" && (
+                    <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center mt-1 shrink-0">
+                      <User className="w-3 h-3 text-muted-foreground" />
                     </div>
                   )}
-                  <p className="text-[10px] text-right mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {message.timestamp.toLocaleTimeString("vi-VN", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
                 </div>
-                {message.role === "user" && (
-                  <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center mt-1 shrink-0">
-                    <User className="w-3 h-3 text-muted-foreground" />
-                  </div>
-                )}
-              </div>
-            ))
+              );
+            })
           )}
           {sending && (
             <div className="flex justify-start gap-2">
@@ -844,6 +921,11 @@ export function ChatbotChatDialog({
           )}
         </div>
       </DialogContent>
+      <ImageViewer
+        isOpen={!!viewingImage}
+        onClose={() => setViewingImage(null)}
+        imageUrl={viewingImage || ""}
+      />
     </Dialog>
   );
 }

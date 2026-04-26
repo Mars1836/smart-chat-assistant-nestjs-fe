@@ -535,17 +535,6 @@ export default function ChatbotsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">{t("chatbots.llmProvider")}</label>
-                  <Input
-                    value={formData.llm_provider}
-                    onChange={(e) =>
-                      setFormData({ ...formData, llm_provider: e.target.value })
-                    }
-                    placeholder="google-ai-studio"
-                  />
-                </div>
-
-                <div className="space-y-2">
                   <label className="text-sm font-medium">{t("chatbots.llmModel")}</label>
                   <select
                     className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
