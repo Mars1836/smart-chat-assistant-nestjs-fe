@@ -836,6 +836,8 @@ Object.assign(dictionaries.vi, {
   "team.removeConfirm": "Bạn có chắc muốn gỡ {name} khỏi workspace này?",
   "team.removeSuccess": "Đã gỡ {name} khỏi workspace",
   "team.removeFailed": "Không thể gỡ thành viên khỏi workspace",
+  "team.removeDialogTitle": "Gỡ thành viên khỏi workspace?",
+  "team.unknownMember": "Thành viên này",
 });
 
 Object.assign(dictionaries.en, {
@@ -899,6 +901,8 @@ Object.assign(dictionaries.en, {
   "team.removeConfirm": "Are you sure you want to remove {name} from this workspace?",
   "team.removeSuccess": "Removed {name} from workspace",
   "team.removeFailed": "Failed to remove member from workspace",
+  "team.removeDialogTitle": "Remove member from workspace?",
+  "team.unknownMember": "This member",
 });
 
 type LanguageContextValue = {

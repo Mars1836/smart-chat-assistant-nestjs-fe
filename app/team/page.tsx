@@ -10,6 +10,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Plus, MoreVertical, Mail, Trash2, Shield, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -39,7 +49,12 @@ export default function TeamPage() {
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [editingMember, setEditingMember] = useState<WorkspaceMember | null>(null);
   const [managingPermissionsMember, setManagingPermissionsMember] = useState<WorkspaceMember | null>(null);
+  const [memberPendingRemoval, setMemberPendingRemoval] =
+    useState<WorkspaceMember | null>(null);
   const workspaceId = selectedWorkspace?.id;
+
+  const getMemberDisplayName = (member: WorkspaceMember) =>
+    member.user.full_name?.trim() || member.user.email || t("team.unknownMember");
 
   useEffect(() => {
     if (workspaceId) {
@@ -66,20 +81,18 @@ export default function TeamPage() {
     }
   };
 
-  const handleRemoveMember = async (id: string, name: string) => {
-    if (!workspaceId) return;
+  const handleRemoveMember = async () => {
+    if (!workspaceId || !memberPendingRemoval) return;
 
-    const confirmed = confirm(
-      translateTemplate(t("team.removeConfirm"), { name })
-    );
-    if (!confirmed) return;
-
+    const id = memberPendingRemoval.id;
+    const name = getMemberDisplayName(memberPendingRemoval);
     setProcessingIds((prev) => new Set(prev).add(id));
 
     try {
       await workspacesApi.removeMember(workspaceId, id);
       setMembers((prev) => prev.filter((member) => member.id !== id));
       toast.success(translateTemplate(t("team.removeSuccess"), { name }));
+      setMemberPendingRemoval(null);
     } catch (error: any) {
       const message = error.response?.data?.message || t("team.removeFailed");
       toast.error(message);
@@ -228,7 +241,7 @@ export default function TeamPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-foreground">
-                            {member.user.full_name}
+                            {getMemberDisplayName(member)}
                           </p>
                           <p className="text-sm text-muted-foreground">
                             {member.user.email}
@@ -307,7 +320,7 @@ export default function TeamPage() {
                                  {canRemove && (
                                    <DropdownMenuItem
                                      className="text-destructive"
-                                     onClick={() => handleRemoveMember(member.id, member.user.full_name)}
+                                     onClick={() => setMemberPendingRemoval(member)}
                                      disabled={isProcessing}
                                    >
                                      <Trash2 className="w-4 h-4 mr-2" />
@@ -461,12 +474,50 @@ export default function TeamPage() {
             }}
             workspaceId={workspaceId || ""}
             memberId={editingMember.id}
-            memberName={editingMember.user.full_name}
+            memberName={getMemberDisplayName(editingMember)}
             currentRole={editingMember.workspaceRole.name}
             currentUserRole={selectedWorkspace?.user_role || "Viewer"}
             onSuccess={loadData}
           />
         )}
+
+        <AlertDialog
+          open={!!memberPendingRemoval}
+          onOpenChange={(open) => {
+            if (!open) setMemberPendingRemoval(null);
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t("team.removeDialogTitle")}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {memberPendingRemoval
+                  ? translateTemplate(t("team.removeConfirm"), {
+                      name: getMemberDisplayName(memberPendingRemoval),
+                    })
+                  : ""}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={!!memberPendingRemoval && processingIds.has(memberPendingRemoval.id)}>
+                {t("common.cancel")}
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={(event) => {
+                  event.preventDefault();
+                  handleRemoveMember();
+                }}
+                disabled={!!memberPendingRemoval && processingIds.has(memberPendingRemoval.id)}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {memberPendingRemoval && processingIds.has(memberPendingRemoval.id) && (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                )}
+                {t("team.remove")}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* Manage Permissions Dialog */}
         {managingPermissionsMember && (
@@ -477,7 +528,7 @@ export default function TeamPage() {
             }}
             workspaceId={workspaceId || ""}
             memberId={managingPermissionsMember.id}
-            memberName={managingPermissionsMember.user.full_name}
+            memberName={getMemberDisplayName(managingPermissionsMember)}
             memberRole={managingPermissionsMember.workspaceRole.name}
           />
         )}
