@@ -47,25 +47,61 @@ interface Message {
   tools_used?: MessageToolUsed[] | null;
 }
 
+function normalizeDisplayText(value: unknown): string {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+
+    if (
+      (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+      (trimmed.startsWith("[") && trimmed.endsWith("]"))
+    ) {
+      try {
+        return normalizeDisplayText(JSON.parse(trimmed));
+      } catch {
+        return value.replace(/\\n/g, "\n").replace(/\\"/g, '"');
+      }
+    }
+
+    return value.replace(/\\n/g, "\n").replace(/\\"/g, '"');
+  }
+
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    const preferred =
+      record.message ??
+      record.response ??
+      record.answer ??
+      record.content ??
+      record.text ??
+      record.result;
+
+    if (typeof preferred === "string") {
+      return normalizeDisplayText(preferred);
+    }
+
+    return JSON.stringify(value, null, 2);
+  }
+
+  return String(value ?? "");
+}
+
 function ToolUsedBlock({ tool }: { tool: MessageToolUsed }) {
   const [expandResult, setExpandResult] = useState(false);
-  const resultStr =
-    typeof tool.result === "string"
-      ? tool.result
-      : JSON.stringify(tool.result, null, 2);
+  const resultStr = normalizeDisplayText(tool.result);
+  const argsStr = normalizeDisplayText(tool.args);
   const isLong = resultStr.length > 200;
   return (
     <div className="rounded border border-border bg-background/50 p-2 space-y-1 text-xs">
       <p className="font-medium">{tool.tool_name}</p>
       <p className="text-muted-foreground">
         <span className="opacity-80">Args:</span>{" "}
-        <code className="text-[10px] break-all">{JSON.stringify(tool.args, null, 2)}</code>
+        <code className="text-[10px] whitespace-pre-wrap break-words">{argsStr}</code>
       </p>
       <div>
         <span className="text-muted-foreground opacity-80">Result:</span>{" "}
         {isLong && !expandResult ? (
           <>
-            <code className="text-[10px] block mt-1 whitespace-pre-wrap break-all line-clamp-3">
+            <code className="text-[10px] block mt-1 whitespace-pre-wrap break-words line-clamp-3">
               {resultStr.slice(0, 200)}…
             </code>
             <button
@@ -77,7 +113,7 @@ function ToolUsedBlock({ tool }: { tool: MessageToolUsed }) {
             </button>
           </>
         ) : (
-          <code className="text-[10px] block mt-1 whitespace-pre-wrap break-all max-h-40 overflow-auto">
+          <code className="text-[10px] block mt-1 whitespace-pre-wrap break-words max-h-40 overflow-auto">
             {resultStr}
           </code>
         )}

@@ -382,6 +382,13 @@ export const workspacesApi = {
     return response.data;
   },
 
+  removeMember: async (
+    workspaceId: string,
+    memberId: string
+  ): Promise<void> => {
+    await client.delete(workspacesEndpoints.removeMember(workspaceId, memberId));
+  },
+
   /**
    * Update member custom permissions
    */

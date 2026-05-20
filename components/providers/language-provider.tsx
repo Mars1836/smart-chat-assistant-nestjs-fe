@@ -833,6 +833,9 @@ Object.assign(dictionaries.vi, {
   "toolActions.new": "Thêm Action Mới",
   "toolActions.create": "Tạo Action",
   "toolActions.add": "Thêm Action",
+  "team.removeConfirm": "Bạn có chắc muốn gỡ {name} khỏi workspace này?",
+  "team.removeSuccess": "Đã gỡ {name} khỏi workspace",
+  "team.removeFailed": "Không thể gỡ thành viên khỏi workspace",
 });
 
 Object.assign(dictionaries.en, {
@@ -893,6 +896,9 @@ Object.assign(dictionaries.en, {
   "toolActions.new": "New Action",
   "toolActions.create": "Create Action",
   "toolActions.add": "Add Action",
+  "team.removeConfirm": "Are you sure you want to remove {name} from this workspace?",
+  "team.removeSuccess": "Removed {name} from workspace",
+  "team.removeFailed": "Failed to remove member from workspace",
 });
 
 type LanguageContextValue = {

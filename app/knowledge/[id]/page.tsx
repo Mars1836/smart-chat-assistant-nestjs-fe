@@ -235,14 +235,21 @@ function KnowledgeDetailContent({ id }: { id: string }) {
             onView={async (doc) => {
                if (!canViewDocument) return;
                if (!selectedWorkspace) return;
+               const previewWindow = window.open("", "_blank");
+               if (!previewWindow) {
+                 toast.error("Popup was blocked. Please allow popups to preview documents.");
+                 return;
+               }
+               previewWindow.document.write("Loading document preview...");
                try {
                   const { token } = await knowledgeApi.getAccessToken(selectedWorkspace.id, doc.id);
                   const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
                   // User confirmed no /api/v1
                   const url = `${baseUrl}/workspaces/${selectedWorkspace.id}/documents/view?token=${token}`;
-                  window.open(url, '_blank');
+                  previewWindow.location.href = url;
                } catch (error) {
                  console.error("Failed to view document", error);
+                 previewWindow.close();
                  toast.error("Failed to access document. Please try again.");
                }
             }}

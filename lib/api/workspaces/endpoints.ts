@@ -17,6 +17,8 @@ export const workspacesEndpoints = {
   getMembers: (id: string) => `${WORKSPACES_BASE}/${id}/members`,
   updateMemberRole: (workspaceId: string, memberId: string) =>
     `${WORKSPACES_BASE}/${workspaceId}/members/${memberId}`,
+  removeMember: (workspaceId: string, memberId: string) =>
+    `${WORKSPACES_BASE}/${workspaceId}/members/${memberId}`,
   updateMemberPermissions: (workspaceId: string, memberId: string) =>
     `${WORKSPACES_BASE}/${workspaceId}/members/${memberId}/permissions`,
   getEffectivePermissions: (workspaceId: string, memberId: string) =>

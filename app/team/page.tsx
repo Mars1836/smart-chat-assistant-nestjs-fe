@@ -67,8 +67,29 @@ export default function TeamPage() {
   };
 
   const handleRemoveMember = async (id: string, name: string) => {
-    // TODO: Implement remove member API
-    toast.error(t("team.removeNotImplemented"));
+    if (!workspaceId) return;
+
+    const confirmed = confirm(
+      translateTemplate(t("team.removeConfirm"), { name })
+    );
+    if (!confirmed) return;
+
+    setProcessingIds((prev) => new Set(prev).add(id));
+
+    try {
+      await workspacesApi.removeMember(workspaceId, id);
+      setMembers((prev) => prev.filter((member) => member.id !== id));
+      toast.success(translateTemplate(t("team.removeSuccess"), { name }));
+    } catch (error: any) {
+      const message = error.response?.data?.message || t("team.removeFailed");
+      toast.error(message);
+    } finally {
+      setProcessingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
   };
 
   // Handle resend invitation
@@ -225,6 +246,7 @@ export default function TeamPage() {
                         
                         {(() => {
                            const currentUserRole = selectedWorkspace?.user_role;
+                           const isProcessing = processingIds.has(member.id);
                            // Check Edit Permission
                            const canEdit = canUpdateRole && (() => {
                              if (member.workspaceRole.name === "Owner") return false;
@@ -256,8 +278,13 @@ export default function TeamPage() {
                                    variant="ghost"
                                    size="sm"
                                    className="opacity-0 group-hover:opacity-100"
+                                   disabled={isProcessing}
                                  >
-                                   <MoreVertical className="w-4 h-4" />
+                                   {isProcessing ? (
+                                     <Loader2 className="w-4 h-4 animate-spin" />
+                                   ) : (
+                                     <MoreVertical className="w-4 h-4" />
+                                   )}
                                  </Button>
                                </DropdownMenuTrigger>
                                <DropdownMenuContent align="end">
@@ -281,6 +308,7 @@ export default function TeamPage() {
                                    <DropdownMenuItem
                                      className="text-destructive"
                                      onClick={() => handleRemoveMember(member.id, member.user.full_name)}
+                                     disabled={isProcessing}
                                    >
                                      <Trash2 className="w-4 h-4 mr-2" />
                                      {t("team.remove")}
