@@ -56,6 +56,11 @@ export default function TeamPage() {
   const getMemberDisplayName = (member: WorkspaceMember) =>
     member.user.full_name?.trim() || member.user.email || t("team.unknownMember");
 
+  const getInviterDisplayName = (invitation: WorkspaceInvitation) =>
+    invitation.invitedByUser.full_name?.trim() ||
+    invitation.invitedByUser.email ||
+    t("team.unknownMember");
+
   useEffect(() => {
     if (workspaceId) {
       loadData();
@@ -371,7 +376,7 @@ export default function TeamPage() {
                           </p>
                           <p className="text-sm text-muted-foreground">
                             {translateTemplate(t("team.invitedBy"), {
-                              name: invitation.invitedByUser.full_name,
+                              name: getInviterDisplayName(invitation),
                             })}
                           </p>
                         </div>
