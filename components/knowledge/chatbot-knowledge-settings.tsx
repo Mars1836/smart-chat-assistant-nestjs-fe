@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
+import { useLanguage, translateTemplate } from "@/components/providers/language-provider";
 
 interface ChatbotKnowledgeSettingsProps {
   chatbotId: string;
@@ -15,6 +16,7 @@ interface ChatbotKnowledgeSettingsProps {
 
 export function ChatbotKnowledgeSettings({ chatbotId }: ChatbotKnowledgeSettingsProps) {
   const { selectedWorkspace, hasPermission } = useWorkspace();
+  const { t } = useLanguage();
   const [allKnowledge, setAllKnowledge] = useState<KnowledgeBase[]>([]);
   const [chatbotKnowledge, setChatbotKnowledge] = useState<ChatbotKnowledge[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,7 +41,7 @@ export function ChatbotKnowledgeSettings({ chatbotId }: ChatbotKnowledgeSettings
       setChatbotKnowledge(assigned);
     } catch (error) {
       console.error(error);
-      toast.error("Failed to load knowledge settings");
+      toast.error(t("knowledge.assignFailed"));
     } finally {
       setLoading(false);
     }
@@ -51,7 +53,6 @@ export function ChatbotKnowledgeSettings({ chatbotId }: ChatbotKnowledgeSettings
       if (exists) {
         return prev.map(k => k.knowledge.id === knowledgeId ? { ...k, is_enabled: enabled } : k);
       }
-      // If not exists, find from allKnowledge to add it
       const kb = allKnowledge.find(k => k.id === knowledgeId);
       if (!kb) return prev;
       return [...prev, {
@@ -72,8 +73,6 @@ export function ChatbotKnowledgeSettings({ chatbotId }: ChatbotKnowledgeSettings
     if (!selectedWorkspace) return;
     try {
       setSaving(true);
-      // In a real app we might batch update
-      // for now iterate and update
       for (const item of chatbotKnowledge) {
         await knowledgeApi.updateChatbotKnowledge(
             selectedWorkspace.id, 
@@ -82,10 +81,10 @@ export function ChatbotKnowledgeSettings({ chatbotId }: ChatbotKnowledgeSettings
             { is_enabled: item.is_enabled, priority: item.priority }
         );
       }
-      toast.success("Knowledge settings saved");
+      toast.success(t("knowledge.assignSaveSuccess"));
     } catch (error) {
       console.error(error);
-      toast.error("Failed to save settings");
+      toast.error(t("knowledge.assignSaveFailed"));
     } finally {
       setSaving(false);
     }
@@ -98,7 +97,7 @@ export function ChatbotKnowledgeSettings({ chatbotId }: ChatbotKnowledgeSettings
   if (!canAssignKnowledge) {
     return (
       <div className="rounded-lg border border-dashed border-border p-6 text-sm text-muted-foreground">
-        You do not have permission to manage chatbot knowledge assignments.
+        {t("knowledge.assignPermissionDenied")}
       </div>
     );
   }
@@ -107,13 +106,13 @@ export function ChatbotKnowledgeSettings({ chatbotId }: ChatbotKnowledgeSettings
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-medium">Knowledge Bases</h3>
-          <p className="text-sm text-muted-foreground">Select which knowledge bases this chatbot can access</p>
+          <h3 className="text-lg font-medium">{t("knowledge.assignTitle")}</h3>
+          <p className="text-sm text-muted-foreground">{t("knowledge.assignDescription")}</p>
         </div>
         <Button onClick={handleSave} disabled={saving}>
             {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
             <Save className="w-4 h-4 mr-2" />
-            Save Changes
+            {t("settings.saveChanges")}
         </Button>
       </div>
 
@@ -138,7 +137,7 @@ export function ChatbotKnowledgeSettings({ chatbotId }: ChatbotKnowledgeSettings
                 <div className="flex-1">
                   <div className="font-medium">{kb.name}</div>
                   <div className="text-sm text-muted-foreground">
-                    {kb.document_count} docs • {kb.total_chunks} chunks
+                    {translateTemplate(t("knowledge.docsChunksSummary"), { docs: kb.document_count, chunks: kb.total_chunks })}
                   </div>
                 </div>
               </CardContent>

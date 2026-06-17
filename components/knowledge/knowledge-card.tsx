@@ -14,7 +14,7 @@ import { KnowledgeBase } from "@/lib/api/knowledge";
 import { formatDistanceToNow } from "date-fns";
 import { vi as localeVi } from "date-fns/locale";
 import { formatFileSize, toSafeNumber } from "@/lib/utils/format-size";
-import { useLanguage } from "@/components/providers/language-provider";
+import { useLanguage, translateTemplate } from "@/components/providers/language-provider";
 
 interface KnowledgeCardProps {
   knowledge: KnowledgeBase;
@@ -23,7 +23,7 @@ interface KnowledgeCardProps {
 }
 
 export function KnowledgeCard({ knowledge, onDelete, onClick }: KnowledgeCardProps) {
-  const { locale } = useLanguage();
+  const { locale, t } = useLanguage();
   const documentCount = toSafeNumber(knowledge.document_count);
   const totalChunks = toSafeNumber(knowledge.total_chunks);
 
@@ -44,10 +44,10 @@ export function KnowledgeCard({ knowledge, onDelete, onClick }: KnowledgeCardPro
               
               <div className="flex items-center gap-2 mt-4 text-xs text-muted-foreground flex-wrap">
                 <Badge variant="secondary" className="font-normal">
-                  {documentCount} document{documentCount !== 1 ? "s" : ""}
+                  {translateTemplate(t("knowledge.docsCount"), { count: documentCount })}
                 </Badge>
                 •
-                <span>{totalChunks} chunks</span>
+                <span>{translateTemplate(t("knowledge.chunksCount"), { count: totalChunks })}</span>
                 •
                 <span>{formatFileSize(knowledge.total_size)}</span>
               </div>
@@ -74,7 +74,7 @@ export function KnowledgeCard({ knowledge, onDelete, onClick }: KnowledgeCardPro
                   // Settings logic
                 }}>
                    <Settings className="w-4 h-4 mr-2" />
-                   Settings
+                   {t("common.settings")}
                 </DropdownMenuItem>
                 {onDelete && (
                   <>
@@ -87,7 +87,7 @@ export function KnowledgeCard({ knowledge, onDelete, onClick }: KnowledgeCardPro
                       }}
                     >
                       <Trash2 className="w-4 h-4 mr-2" />
-                      Delete
+                      {t("common.delete")}
                     </DropdownMenuItem>
                   </>
                 )}

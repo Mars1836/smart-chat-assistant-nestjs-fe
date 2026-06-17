@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { formatFileSize, toSafeNumber } from "@/lib/utils/format-size";
+import { useLanguage } from "@/components/providers/language-provider";
 
 // Since this is a client component, we can unscramble params using use() hook if we wanted, 
 // but Next.js 13/14 client components receive params directly as prop if defined in page.tsx 
@@ -25,6 +26,7 @@ interface PageProps {
 
 function KnowledgeDetailContent({ id }: { id: string }) {
   const { selectedWorkspace, hasPermission } = useWorkspace();
+  const { t } = useLanguage();
   const [knowledge, setKnowledge] = useState<KnowledgeBase & { documents?: Document[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
@@ -67,7 +69,7 @@ function KnowledgeDetailContent({ id }: { id: string }) {
       setKnowledge(data);
     } catch (error) {
       console.error(error);
-      toast.error("Failed to load knowledge base details");
+      toast.error(t("knowledge.loadDetailsFailed"));
     } finally {
       setLoading(false);
     }
@@ -115,14 +117,14 @@ function KnowledgeDetailContent({ id }: { id: string }) {
 
   const handleDeleteDocument = async (docId: string) => {
     if (!selectedWorkspace) return;
-    if (!confirm("Delete this document?")) return;
+    if (!confirm(t("knowledge.deleteDocConfirm"))) return;
     try {
       await knowledgeApi.deleteDocument(selectedWorkspace.id, docId);
-      toast.success("Document deleted");
+      toast.success(t("knowledge.deleteDocSuccess"));
       loadDetails();
     } catch (error) {
       console.error(error);
-      toast.error("Failed to delete document");
+      toast.error(t("knowledge.deleteDocFailed"));
     }
   };
 
@@ -144,7 +146,7 @@ function KnowledgeDetailContent({ id }: { id: string }) {
     return (
       <AppLayout activeModule="knowledge">
         <div className="p-6 text-center text-muted-foreground">
-          You do not have permission to view this knowledge base.
+          {t("knowledge.permissionDenied")}
         </div>
       </AppLayout>
     );
@@ -156,9 +158,9 @@ function KnowledgeDetailContent({ id }: { id: string }) {
          <div className="p-6">
             <Button variant="ghost" onClick={handleBack} className="mb-4">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back
+              {t("knowledge.backToBases")}
             </Button>
-            <div className="text-center py-20">Knowledge Base not found</div>
+            <div className="text-center py-20">{t("knowledge.notFound")}</div>
          </div>
       </AppLayout>
     );
@@ -172,7 +174,7 @@ function KnowledgeDetailContent({ id }: { id: string }) {
           <div>
             <Button variant="ghost" onClick={handleBack} className="mb-4 pl-0 hover:pl-0 hover:bg-transparent">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Knowledge
+              {t("knowledge.backToBases")}
             </Button>
             
             <div className="flex items-center gap-4">
@@ -185,15 +187,15 @@ function KnowledgeDetailContent({ id }: { id: string }) {
             
             <div className="flex gap-4 mt-6">
                 <div className="bg-muted/50 rounded-lg px-4 py-2 text-center">
-                    <div className="text-sm font-medium text-muted-foreground">Documents</div>
+                    <div className="text-sm font-medium text-muted-foreground">{t("knowledge.documents")}</div>
                     <div className="text-xl font-bold">{computedTotals.documents}</div>
                 </div>
                 <div className="bg-muted/50 rounded-lg px-4 py-2 text-center">
-                    <div className="text-sm font-medium text-muted-foreground">Chunks</div>
+                    <div className="text-sm font-medium text-muted-foreground">{t("knowledge.chunks")}</div>
                     <div className="text-xl font-bold">{computedTotals.chunks}</div>
                 </div>
                 <div className="bg-muted/50 rounded-lg px-4 py-2 text-center">
-                    <div className="text-sm font-medium text-muted-foreground">Size</div>
+                    <div className="text-sm font-medium text-muted-foreground">{t("knowledge.size")}</div>
                     <div className="text-xl font-bold">{formatFileSize(computedTotals.sizeBytes)}</div>
                 </div>
             </div>
@@ -203,13 +205,13 @@ function KnowledgeDetailContent({ id }: { id: string }) {
             {canUpdateKnowledge && (
               <Button variant="outline" size="sm">
                 <Edit className="w-4 h-4 mr-2" />
-                Edit
+                {t("common.edit")}
               </Button>
             )}
             {canDeleteKnowledge && (
               <Button variant="destructive" size="sm">
                 <Trash2 className="w-4 h-4 mr-2" />
-                Delete
+                {t("common.delete")}
               </Button>
             )}
           </div>
@@ -218,11 +220,11 @@ function KnowledgeDetailContent({ id }: { id: string }) {
         {/* Documents Section */}
         <div className="pt-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold">Documents</h2>
+            <h2 className="text-xl font-semibold">{t("knowledge.documents")}</h2>
             {canUploadDocument && (
               <Button onClick={() => setUploadDialogOpen(true)}>
                 <Upload className="w-4 h-4 mr-2" />
-                Upload Document
+                {t("knowledge.uploadDocument")}
               </Button>
             )}
           </div>
@@ -237,7 +239,7 @@ function KnowledgeDetailContent({ id }: { id: string }) {
                if (!selectedWorkspace) return;
                const previewWindow = window.open("", "_blank");
                if (!previewWindow) {
-                 toast.error("Popup was blocked. Please allow popups to preview documents.");
+                 toast.error(t("knowledge.popupBlocked"));
                  return;
                }
                previewWindow.document.write("Loading document preview...");
@@ -250,7 +252,7 @@ function KnowledgeDetailContent({ id }: { id: string }) {
                } catch (error) {
                  console.error("Failed to view document", error);
                  previewWindow.close();
-                 toast.error("Failed to access document. Please try again.");
+                 toast.error(t("knowledge.accessDocFailed"));
                }
             }}
           />

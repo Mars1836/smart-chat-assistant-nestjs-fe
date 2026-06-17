@@ -1,6 +1,7 @@
 
 import { Document } from "@/lib/api/knowledge";
 import { formatDistanceToNow } from "date-fns";
+import { vi as localeVi } from "date-fns/locale";
 import { FileText, Image, File, Loader2, CheckCircle2, AlertCircle, Eye, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +14,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { formatFileSize } from "@/lib/utils/format-size";
+import { useLanguage, translateTemplate } from "@/components/providers/language-provider";
 
 interface DocumentListProps {
   documents: Document[];
@@ -32,34 +34,34 @@ const getFileIcon = (type: string) => {
   return File;
 };
 
-const getStatusBadge = (status: Document["status"], progress: number) => {
+const getStatusBadge = (status: Document["status"], progress: number, t: (key: string) => string) => {
   switch (status) {
     case "indexed":
       return (
         <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 gap-1">
           <CheckCircle2 className="w-3 h-3" />
-          Indexed
+          {t("knowledge.statusIndexed")}
         </Badge>
       );
     case "processing":
       return (
         <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 gap-1">
           <Loader2 className="w-3 h-3 animate-spin" />
-          Processing ({progress}%)
+          {t("knowledge.statusProcessing").replace("{progress}", String(progress))}
         </Badge>
       );
     case "failed":
       return (
         <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 gap-1">
           <AlertCircle className="w-3 h-3" />
-          Failed
+          {t("knowledge.statusFailed")}
         </Badge>
       );
     default:
       return (
         <Badge variant="outline" className="text-muted-foreground gap-1">
           <Loader2 className="w-3 h-3" />
-          Pending
+          {t("knowledge.statusPending")}
         </Badge>
       );
   }
@@ -72,12 +74,14 @@ export function DocumentList({
   canDelete = true,
   canView = true,
 }: DocumentListProps) {
+  const { locale, t } = useLanguage();
+
   if (documents.length === 0) {
     return (
       <div className="text-center py-12 border rounded-lg bg-muted/20 border-dashed">
         <FileText className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
-        <h3 className="font-medium text-lg">No documents yet</h3>
-        <p className="text-muted-foreground text-sm">Upload documents to get started</p>
+        <h3 className="font-medium text-lg">{t("knowledge.noDocsYet")}</h3>
+        <p className="text-muted-foreground text-sm">{t("knowledge.noDocsYetDesc")}</p>
       </div>
     );
   }
@@ -87,11 +91,11 @@ export function DocumentList({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Size</TableHead>
-            <TableHead>Chunks</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Uploaded</TableHead>
+            <TableHead>{t("knowledge.tableName")}</TableHead>
+            <TableHead>{t("knowledge.tableSize")}</TableHead>
+            <TableHead>{t("knowledge.tableChunks")}</TableHead>
+            <TableHead>{t("knowledge.tableStatus")}</TableHead>
+            <TableHead>{t("knowledge.tableUploaded")}</TableHead>
             <TableHead className="w-[100px]"></TableHead>
           </TableRow>
         </TableHeader>
@@ -118,11 +122,16 @@ export function DocumentList({
                   {doc.chunk_count}
                 </TableCell>
                 <TableCell>
-                  {getStatusBadge(doc.status, doc.processing_progress)}
+                  {getStatusBadge(doc.status, doc.processing_progress, t)}
                 </TableCell>
                 <TableCell className="text-muted-foreground text-sm">
-                  {formatDistanceToNow(new Date(doc.uploaded_at))} ago
-                  <div className="text-xs opacity-70">by {doc.user?.email}</div>
+                  {formatDistanceToNow(new Date(doc.uploaded_at), {
+                    addSuffix: true,
+                    ...(locale === "vi" ? { locale: localeVi } : {}),
+                  })}
+                  <div className="text-xs opacity-70">
+                    {translateTemplate(t("knowledge.uploadedBy"), { email: doc.user?.email || "" })}
+                  </div>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center justify-end gap-1">

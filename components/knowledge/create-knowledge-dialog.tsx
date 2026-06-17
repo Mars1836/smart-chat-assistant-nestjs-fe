@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { CreateKnowledgeDto } from "@/lib/api/knowledge";
 import { Loader2 } from "lucide-react";
+import { useLanguage } from "@/components/providers/language-provider";
 
 interface CreateKnowledgeDialogProps {
   open: boolean;
@@ -17,6 +18,7 @@ interface CreateKnowledgeDialogProps {
 const ICONS = ["📚", "❓", "📋", "💼", "🔧", "📊", "🤖", "📝"];
 
 export function CreateKnowledgeDialog({ open, onOpenChange, onSubmit }: CreateKnowledgeDialogProps) {
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<CreateKnowledgeDto>({
     name: "",
@@ -42,12 +44,12 @@ export function CreateKnowledgeDialog({ open, onOpenChange, onSubmit }: CreateKn
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Create Knowledge Base</DialogTitle>
+          <DialogTitle>{t("knowledge.createTitle")}</DialogTitle>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-6 py-4">
           <div className="space-y-2">
-            <Label>Icon</Label>
+            <Label>{t("knowledge.iconLabel")}</Label>
             <div className="flex flex-wrap gap-2">
               {ICONS.map((icon) => (
                 <button
@@ -67,23 +69,23 @@ export function CreateKnowledgeDialog({ open, onOpenChange, onSubmit }: CreateKn
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="name">Name</Label>
+            <Label htmlFor="name">{t("knowledge.nameLabel")}</Label>
             <Input
               id="name"
               required
               value={data.name}
               onChange={(e) => setData({ ...data, name: e.target.value })}
-              placeholder="e.g., Product Documentation"
+              placeholder={t("knowledge.namePlaceholder")}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="description">{t("knowledge.descriptionLabel")}</Label>
             <Textarea
               id="description"
               value={data.description}
               onChange={(e) => setData({ ...data, description: e.target.value })}
-              placeholder="Briefly describe this knowledge base..."
+              placeholder={t("knowledge.descriptionPlaceholder")}
               rows={3}
             />
           </div>
@@ -95,11 +97,11 @@ export function CreateKnowledgeDialog({ open, onOpenChange, onSubmit }: CreateKn
               onClick={() => onOpenChange(false)}
               disabled={loading}
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button type="submit" disabled={loading}>
               {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Create
+              {t("common.create")}
             </Button>
           </DialogFooter>
         </form>

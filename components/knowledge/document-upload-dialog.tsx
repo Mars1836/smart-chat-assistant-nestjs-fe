@@ -9,6 +9,7 @@ import { knowledgeApi } from "@/lib/api/knowledge";
 import { tokenStorage } from "@/lib/api/token-storage";
 import { useWorkspace } from "@/lib/stores/workspace-store";
 import { useParams } from "next/navigation";
+import { useLanguage, translateTemplate } from "@/components/providers/language-provider";
 
 interface DocumentUploadDialogProps {
   open: boolean;
@@ -17,6 +18,7 @@ interface DocumentUploadDialogProps {
 }
 
 export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentUploadDialogProps) {
+  const { t } = useLanguage();
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState<Record<string, number>>({});
@@ -25,6 +27,16 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
   const inputRef = useRef<HTMLInputElement>(null);
   const { selectedWorkspace } = useWorkspace();
   const params = useParams(); // To get knowledgeId if available in URL params
+
+  const getStatusTranslation = (statusText: string) => {
+    if (!statusText) return "";
+    if (statusText === "Uploading...") return t("knowledge.statusUploading");
+    if (statusText === "Processing...") return t("knowledge.statusProcessing").replace(" ({progress}%)", "");
+    if (statusText === "Upload Failed") return t("knowledge.statusUploadFailed");
+    if (statusText === "Failed") return t("knowledge.statusFailed");
+    if (statusText === "Done") return t("knowledge.uploadedAndIndexed");
+    return statusText;
+  };
 
   const handleFiles = (newFiles: FileList | null) => {
     if (!newFiles) return;
@@ -59,7 +71,7 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
        const name = fileToRemove.name;
        setProgress(prev => { const n = {...prev}; delete n[name]; return n; });
        setStatus(prev => { const n = {...prev}; delete n[name]; return n; });
-    }
+     }
   };
 
   const abortControllers = useRef<Record<string, AbortController>>({});
@@ -70,6 +82,7 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
       Object.values(abortControllers.current).forEach(controller => controller.abort());
     };
   }, []);
+  
   const startProgressTracking = async (documentId: string, fileName: string) => {
      if (!selectedWorkspace) return;
      const token = tokenStorage.getAccessToken();
@@ -130,9 +143,6 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
     const knowledgeId = params?.id as string;
     
     if (!knowledgeId) {
-       // Fallback to calling onUpload (legacy behavior) if we can't find ID?
-       // But user wants SSE. 
-       // If no knowledgeId and we are in a context where this dialog is used without ID, it's a bug.
        console.error("Knowledge ID not found in params");
        return;
     }
@@ -190,7 +200,7 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>Upload Documents</DialogTitle>
+          <DialogTitle>{t("knowledge.uploadTitle")}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
@@ -217,13 +227,13 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
                   <Upload className="w-6 h-6 text-primary" />
                 </div>
                 <p className="font-medium">
-                  {isDragActive ? "Drop files here" : "Drag & drop files here or click to browse"}
+                  {isDragActive ? t("knowledge.dragActivePrompt") : t("knowledge.dragNormalPrompt")}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  PDF, DOCX, TXT, MD, PNG, JPG (max 20MB)
+                  {t("knowledge.uploadHint")}
                 </p>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Images are automatically processed using Gemini Vision AI
+                  {t("knowledge.visionHint")}
                 </p>
               </div>
             </div>
@@ -231,7 +241,7 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
 
           {files.length > 0 && (
             <div className="space-y-4">
-              <h4 className="text-sm font-medium">Files ({files.length})</h4>
+              <h4 className="text-sm font-medium">{translateTemplate(t("knowledge.filesHeader"), { count: files.length })}</h4>
               <div className="space-y-2 max-h-[300px] overflow-auto pr-2">
                 {files.map((file, index) => (
                   <div key={index} className="flex items-center gap-3 p-3 border rounded-lg bg-card">
@@ -263,15 +273,15 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
                           <div className="flex items-center gap-2 text-xs text-muted-foreground">
                             {status[file.name] === "Done" ? (
                               <span className="text-green-600 flex items-center gap-1">
-                                <CheckCircle2 className="w-3 h-3" /> Uploaded & Indexed
+                                <CheckCircle2 className="w-3 h-3" /> {t("knowledge.uploadedAndIndexed")}
                               </span>
                             ) : status[file.name] === "Failed" ? (
                                <span className="text-destructive flex items-center gap-1">
-                                <AlertCircle className="w-3 h-3" /> Failed
+                                <AlertCircle className="w-3 h-3" /> {t("knowledge.statusFailed")}
                               </span>
                             ) : (
                               <span className="flex items-center gap-1">
-                                <Loader2 className="w-3 h-3 animate-spin" /> {status[file.name]} ({progress[file.name] || 0}%)
+                                <Loader2 className="w-3 h-3 animate-spin" /> {getStatusTranslation(status[file.name])} ({progress[file.name] || 0}%)
                               </span>
                             )}
                           </div>
@@ -296,14 +306,14 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
               onClick={() => onOpenChange(false)}
               disabled={uploading}
             >
-              {uploading ? "Close (Background)" : "Cancel"}
+              {uploading ? t("knowledge.closeBackground") : t("common.cancel")}
             </Button>
             {!uploading && (
                 <Button 
                 onClick={handleUploadProcess} 
                 disabled={files.length === 0}
                 >
-                Upload Files
+                {t("knowledge.uploadFiles")}
                 </Button>
             )}
           </div>
